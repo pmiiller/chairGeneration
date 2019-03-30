@@ -8,3 +8,4 @@ Requirements:
  - Python 3.*
  - [PyMesh](https://pymesh.readthedocs.io/en/latest/#)
  - [LeChairs](https://drive.google.com/file/d/19p7GjhSbcBYy6VUbuMHugcqD1tkQfl6-/view)
+     - Place the LeChairs folder into the base directory of the repo
