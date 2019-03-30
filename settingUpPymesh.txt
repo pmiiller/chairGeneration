@@ -1,0 +1,41 @@
+sudo apt-get install python3-venv
+python3 -m venv venv
+source venv/bin/activate
+
+git clone https://github.com/PyMesh/PyMesh.git
+cd PyMesh
+git submodule update --init
+export PYMESH_PATH=`pwd`
+
+pip3 install numpy
+pip3 install scipy
+pip3 install nose
+pip3 install cmake
+
+sudo apt-get install libeigen3-dev
+sudo apt-get install libgmp-dev
+sudo apt-get install libgmpxx4ldbl
+sudo apt-get install libmpfr-dev
+sudo apt-get install libboost-dev
+sudo apt-get install libboost-thread-dev
+sudo apt-get install libtbb-dev
+sudo apt-get install python3-dev
+
+cd $PYMESH_PATH/third_party
+mkdir build
+cd build
+cmake ..
+make
+make install
+
+cd $PYMESH_PATH
+mkdir build
+cd build
+cmake ..
+
+make
+make tests
+
+cd $PYMESH_PATH
+./setup.py build <- gets stuck on this, continue for desktop and laptop
+./setup.py install
