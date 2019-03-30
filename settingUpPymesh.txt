@@ -37,5 +37,5 @@ make
 make tests
 
 cd $PYMESH_PATH
-./setup.py build <- gets stuck on this, continue for desktop and laptop
+./setup.py build
 ./setup.py install
