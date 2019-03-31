@@ -47,16 +47,16 @@ def checkCollision(obb1, obb2):
 	minX1 = np.amin(reshaped[0])
 	maxX1 = np.amax(reshaped[0])
 	minY1 = np.amin(reshaped[1])
-	maxY1 = np.amin(reshaped[1])
-	minZ1 = np.amax(reshaped[2])
+	maxY1 = np.amax(reshaped[1])
+	minZ1 = np.amin(reshaped[2])
 	maxZ1 = np.amax(reshaped[2])
 
 	reshaped = mesh2.vertices.T
 	minX2 = np.amin(reshaped[0])
 	maxX2 = np.amax(reshaped[0])
 	minY2 = np.amin(reshaped[1])
-	maxY2 = np.amin(reshaped[1])
-	minZ2 = np.amax(reshaped[2])
+	maxY2 = np.amax(reshaped[1])
+	minZ2 = np.amin(reshaped[2])
 	maxZ2 = np.amax(reshaped[2])
 
 	# simple box collision detection found from
