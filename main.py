@@ -4,6 +4,7 @@ from os import listdir
 from os.path import isfile, isdir, join
 import sys
 import random
+import numpy as np
 
 templates = []
 parts = []
@@ -18,6 +19,30 @@ def computeOBB(mesh):
 def calculateDeformationCost(targetOBB, candidateOBB):
     # do something
     return random.uniform(0.0, 10.0)
+
+def connectPartToMesh(mesh, part):
+    # ensures basic connectivity
+    # there is probably a better way to connect
+    pointDistances = pymesh.distance_to_mesh(mesh, part.vertices)
+    minSquaredDistance = sys.float_info.max
+    closestPointMesh = None
+    closestPointPart = None
+
+    # enumerate the minimum squared distances
+    for index, pointDistance in enumerate(pointDistances[0]):
+        # find the minimum squared distance and the corresponding point pair
+        if pointDistance < minSquaredDistance:
+            minSquaredDistance = pointDistance
+            closestPointMesh = pointDistances[2][index]
+            closestPointPart = part.vertices[index]
+
+    connectionTranslation = closestPointPart - closestPointMesh
+
+    newVertices = np.ndarray(part.vertices.shape, part.vertices.dtype)
+    for index, vertex in enumerate(part.vertices):
+        newVertices[index] = vertex - connectionTranslation
+
+    return pymesh.form_mesh(newVertices, selectedMesh.faces)
 
 
 # Read all parts for all chairs and create the templates
@@ -54,6 +79,7 @@ for templatePart in selectedTemplate.templateParts:
     if newMesh == None:
         newMesh = selectedMesh
     else :
-        newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
+        connectedMesh = connectPartToMesh(newMesh, selectedMesh)
+        newMesh = pymesh.merge_meshes([newMesh, connectedMesh])
 
 pymesh.save_mesh("newChair.obj", newMesh);
