@@ -31,7 +31,7 @@ def connectPartToMesh(mesh, part):
     closestPointMesh = None
     closestPointPart = None
 
-    # enumerate the minimum squared distannumpy.linalg.normces
+    # enumerate the minimum squared distances
     for index, pointDistance in enumerate(pointDistances[0]):
         # find the minimum squared distance and the corresponding point pair
         if pointDistance < minSquaredDistance:
