@@ -5,6 +5,7 @@ from os.path import isfile, isdir, join
 import sys
 import random
 import numpy as np
+import obb
 
 templates = []
 parts = []
@@ -13,12 +14,14 @@ TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox")
 
 
 def computeOBB(mesh):
-    # do something
-    return None
+    boundingBox = obb.convertMeshToObb(mesh);
+    return boundingBox
 
-def calculateDeformationCost(targetOBB, candidateOBB):
-    # do something
-    return random.uniform(0.0, 10.0)
+def calculateDeformationCost(target, candidate):
+    # right now just simply returns the distance between the centroids
+    # TODO need to come up with a better deformation cost function
+    # think, how would you transform one box into another
+    return np.linalg.norm(target.boundingBox.centroid - candidate.boundingBox.centroid)
 
 def connectPartToMesh(mesh, part):
     # ensures basic connectivity
@@ -28,7 +31,7 @@ def connectPartToMesh(mesh, part):
     closestPointMesh = None
     closestPointPart = None
 
-    # enumerate the minimum squared distances
+    # enumerate the minimum squared distannumpy.linalg.normces
     for index, pointDistance in enumerate(pointDistances[0]):
         # find the minimum squared distance and the corresponding point pair
         if pointDistance < minSquaredDistance:
