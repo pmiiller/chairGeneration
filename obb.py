@@ -62,23 +62,14 @@ def checkCollision(obb1, obb2):
 	# simple box collision detection found from
 	# https://www.cbcity.de/simple-3d-collision-detection-with-python-scripting-in-blender
 	intersectX = (maxX1 >= minX2 and maxX1 <= maxX2) or (maxX2 >= minX1 and maxX2 <= maxX1)
-	print("intersectX")
-	print(intersectX)
 	intersectY = (maxY1 >= minY2 and maxY1 <= maxY2) or (maxY2 >= minY1 and maxY2 <= maxY1)
-	print("intersectY")
-	print(intersectY)
 	intersectZ = (maxZ1 >= minZ2 and maxZ1 <= maxZ2) or (maxZ2 >= minZ1 and maxZ2 <= maxZ1)
-	print("intersectZ")
-	print(intersectZ)
 	return intersectX and intersectY and intersectZ
 
 
 
 if __name__ == '__main__':
 	file = sys.argv[1]
-	file2 = sys.argv[2]
-	obb2 = getOBB(file2)
 	obb = getOBB(file)
-	print(checkCollision(obb, obb2))
-	#mesh = convertObbToMesh(obb)
-	#pymesh.save_mesh("box.obj", mesh)
+	mesh = convertObbToMesh(obb)
+	pymesh.save_mesh("box.obj", mesh)
