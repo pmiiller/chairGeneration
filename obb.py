@@ -64,7 +64,7 @@ def checkCollision(obb1, obb2):
 	intersectX = (maxX1 >= minX2 and maxX1 <= maxX2) or (maxX2 >= minX1 and maxX2 <= maxX1)
 	intersectY = (maxY1 >= minY2 and maxY1 <= maxY2) or (maxY2 >= minY1 and maxY2 <= maxY1)
 	intersectZ = (maxZ1 >= minZ2 and maxZ1 <= maxZ2) or (maxZ2 >= minZ1 and maxZ2 <= maxZ1)
-	return intersectX or intersectY or intersectZ
+	return intersectX and intersectY and intersectZ
 
 
 
