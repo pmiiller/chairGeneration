@@ -21,7 +21,28 @@ def calculateDeformationCost(target, candidate):
     # right now just simply returns the distance between the centroids
     # TODO need to come up with a better deformation cost function
     # think, how would you transform one box into another
-    return np.linalg.norm(target.boundingBox.centroid - candidate.boundingBox.centroid)
+
+    centroidDistance = np.linalg.norm(target.boundingBox.centroid - candidate.boundingBox.centroid)
+    extentsDistance = np.linalg.norm(target.boundingBox.extents - candidate.boundingBox.extents)
+
+    return centroidDistance + extentsDistance
+
+def matchOBB(target, candidate, mesh):
+    translation = target.boundingBox.centroid - candidate.boundingBox.centroid
+
+    a = np.array([[1,0,0,translation[0]],
+              [0,1,0,translation[1]],
+              [0,0,1,translation[2]],
+              [0,0,0,1]])
+
+    newVertices = np.ndarray(mesh.vertices.shape, mesh.vertices.dtype)
+    for index, vertex in enumerate(mesh.vertices):
+
+        homVertex = np.array([vertex[0], vertex[1], vertex[2], 1])
+        transformedVertex = np.matmul(a, homVertex)
+        newVertices[index] = np.array([transformedVertex[0], transformedVertex[1], transformedVertex[2]]) / transformedVertex[3]
+
+    return pymesh.form_mesh(newVertices, mesh.faces)
 
 def connectPartToMesh(mesh, part):
     # ensures basic connectivity
@@ -39,11 +60,11 @@ def connectPartToMesh(mesh, part):
             closestPointMesh = pointDistances[2][index]
             closestPointPart = part.vertices[index]
 
-    connectionTranslation = closestPointPart - closestPointMesh
+    connectionTranslation = closestPointMesh - closestPointPart
 
     newVertices = np.ndarray(part.vertices.shape, part.vertices.dtype)
     for index, vertex in enumerate(part.vertices):
-        newVertices[index] = vertex - connectionTranslation
+        newVertices[index] = vertex + connectionTranslation
 
     return pymesh.form_mesh(newVertices, selectedMesh.faces)
 
@@ -63,12 +84,17 @@ for chairDir in chairDirs:
     templates.append(newTemplate)
 
 # Select a random template
-index = random.randint(0, len(templates))
+index = random.randint(0, len(templates)-1)
 selectedTemplate = templates[index]
+
+print("selectedTemplate: ", selectedTemplate.dir)
 
 # For each part in that template, pick the part with the lowest deformation cost
 newMesh = None
+obbMesh = None
 for templatePart in selectedTemplate.templateParts:
+
+    # Select the part that has the obb that best fits the obb of the template part
     selectedPart = None
     minDeformationCost = sys.float_info.max
     for part in parts:
@@ -78,11 +104,26 @@ for templatePart in selectedTemplate.templateParts:
                 minDeformationCost = deformationCost
                 selectedPart = part
     selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
-    # should transform the selectedMesh so the OBB matches the templatePart's OBB
+
+    # transform the selectedMesh so the OBB matches the templatePart's OBB
+    selectedMesh = matchOBB(templatePart, selectedPart, selectedMesh)
+
+    # add the selectedMesh to the newMesh
     if newMesh == None:
         newMesh = selectedMesh
     else :
-        connectedMesh = connectPartToMesh(newMesh, selectedMesh)
-        newMesh = pymesh.merge_meshes([newMesh, connectedMesh])
+        # selectedMesh = connectPartToMesh(newMesh, selectedMesh)
+        newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
+
+
+    # FOR DEBUGING: Save the obb mesh
+    boundingBox = templatePart.boundingBox
+    selectedObb = obb.convertObbToMesh(boundingBox);
+    if obbMesh == None:
+        obbMesh = selectedObb
+    else :
+        obbMesh = pymesh.merge_meshes([obbMesh, selectedObb])
+
 
 pymesh.save_mesh("newChair.obj", newMesh);
+pymesh.save_mesh("obbChair.obj", obbMesh);
