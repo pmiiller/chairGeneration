@@ -24,25 +24,22 @@ def calculateDeformationCost(target, candidate):
     # TODO need to come up with a better deformation cost function
 
     centroidDifference = target.boundingBox.centroid - candidate.boundingBox.centroid
-    extentsDistance = target.boundingBox.extents - candidate.boundingBox.extents
+    extentsDifference = target.boundingBox.extents - candidate.boundingBox.extents
 
-    rotationDistance = 0
-
-    weights = [1.0, 1.0, 0.0]
-
-    return np.sum(weights[0] * np.square(centroidDifference) + weights[1] * np.square(extentsDistance) + weights[2] * rotationDistance)
-
-    # rotationTarget = np.delete(np.delete(target.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
-    # rotationCandidate = np.delete(np.delete(candidate.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
-    # rotationDifference = np.matmul(np.transpose(rotationCandidate), rotationTarget)
-    # rotationDifferenceTrace = np.trace(rotationDifference)
-    # if rotationDifferenceTrace > 1.0 :
-    #     rotationDifferenceTrace = 1.0
-    # if rotationDifferenceTrace < -1.0 :
-    #     rotationDifferenceTrace = -1.0
-    # rotationDistance = math.acos((rotationDifferenceTrace - 1.0) / 2.0)
+    rotationTarget = np.delete(np.delete(target.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
+    rotationCandidate = np.delete(np.delete(candidate.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
+    rotationDifference = np.matmul(rotationCandidate, np.transpose(rotationTarget))
+    rotationDifferenceTrace = np.trace(rotationDifference)
+    if rotationDifferenceTrace > 1.0 :
+        rotationDifferenceTrace = 1.0
+    if rotationDifferenceTrace < -1.0 :
+        rotationDifferenceTrace = -1.0
+    rotationDistance = math.acos((rotationDifferenceTrace - 1.0) / 2.0)
 
     # Need to come up with a better function or a better way to tune the weights
+    weights = [1.0, 1.0, 1.0]
+
+    return np.sum(weights[0] * np.square(centroidDifference) + weights[1] * np.square(extentsDifference) + weights[2] * np.square(rotationDistance))
 
 def matchOBB(target, candidate, mesh):
     # Transforms the candidate mesh so its obb matches the obb of the target
@@ -64,22 +61,28 @@ def matchOBB(target, candidate, mesh):
               [0,0,1,-canCent[2]],
               [0,0,0,1]])
 
-    rotationCandidate = np.delete(np.delete(candidate.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    # rotationCandidate = np.delete(np.delete(candidate.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    # rotationCandidate = np.delete(np.delete(candidate.boundingBox.apply_obb(), 3, 0), 3, 1)
+    rotationCandidate = np.delete(np.delete(candidate.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
     canRotInv = np.array([[rotationCandidate[0][0],rotationCandidate[0][1],rotationCandidate[0][2],0],
               [rotationCandidate[1][0],rotationCandidate[1][1],rotationCandidate[1][2],0],
               [rotationCandidate[2][0],rotationCandidate[2][1],rotationCandidate[2][2],0],
               [0,0,0,1]])
+    canRotInv = np.transpose(canRotInv)
 
     scale = np.array([[scaleExtents[0],0,0,0],
               [0,scaleExtents[1],0,0],
               [0,0,scaleExtents[2],0],
               [0,0,0,1]])
 
-    rotationTarget = np.delete(np.delete(target.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    # rotationTarget = np.delete(np.delete(target.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    # rotationTarget = np.delete(np.delete(target.boundingBox.apply_obb(), 3, 0), 3, 1)
+    rotationTarget = np.delete(np.delete(target.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
     tarRot = np.array([[rotationTarget[0][0],rotationTarget[0][1],rotationTarget[0][2],0],
               [rotationTarget[1][0],rotationTarget[1][1],rotationTarget[1][2],0],
               [rotationTarget[2][0],rotationTarget[2][1],rotationTarget[2][2],0],
               [0,0,0,1]])
+    # tarRot = np.transpose(tarRot)
 
     orgToTar = np.array([[1,0,0,tarCent[0]],
               [0,1,0,tarCent[1]],
@@ -87,9 +90,9 @@ def matchOBB(target, candidate, mesh):
               [0,0,0,1]])
 
     transform = np.matmul(transform, orgToTar)
-    # transform = np.matmul(transform, tarRot)
+    transform = np.matmul(transform, tarRot)
     # transform = np.matmul(transform, scale)
-    # transform = np.matmul(transform, canRotInv)
+    transform = np.matmul(transform, canRotInv)
     transform = np.matmul(transform, canToOrg)
 
     newVertices = np.ndarray(mesh.vertices.shape, mesh.vertices.dtype)
@@ -178,6 +181,14 @@ if __name__ == '__main__':
                     selectedPart = part
         selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
+        # FOR DEBUGING: Save the obb mesh
+        boundingBox = templatePart.boundingBox
+        selectedObb = trimesh_obb.convertObbToMesh(boundingBox);
+        if obbMesh == None:
+            obbMesh = selectedObb
+        else :
+            obbMesh = pymesh.merge_meshes([obbMesh, selectedObb])
+
         # transform the selectedMesh so the OBB matches the templatePart's OBB
         selectedMesh = matchOBB(templatePart, selectedPart, selectedMesh)
 
@@ -187,14 +198,6 @@ if __name__ == '__main__':
         else :
             # selectedMesh = connectPartToMesh(newMesh, selectedMesh)
             newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
-
-        # FOR DEBUGING: Save the obb mesh
-        boundingBox = templatePart.boundingBox
-        selectedObb = trimesh_obb.convertObbToMesh(boundingBox);
-        if obbMesh == None:
-            obbMesh = selectedObb
-        else :
-            obbMesh = pymesh.merge_meshes([obbMesh, selectedObb])
 
     pymesh.save_mesh("newChair.obj", newMesh);
     pymesh.save_mesh("obbChair.obj", obbMesh);
