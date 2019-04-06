@@ -6,7 +6,8 @@ import sys
 import random
 import math
 import numpy as np
-import obb
+# import obb
+import trimesh_obb
 
 templates = []
 parts = []
@@ -14,24 +15,34 @@ Template = namedtuple("Template", "dir templateParts")
 TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox")
 
 
-def computeOBB(mesh):
-    boundingBox = obb.convertMeshToObb(mesh);
+def computeOBB(pymesh):
+    trimesh = trimesh_obb.convertPymeshToTrimesh(pymesh);
+    boundingBox = trimesh_obb.convertMeshToObb(trimesh)
     return boundingBox
 
 def calculateDeformationCost(target, candidate):
     # TODO need to come up with a better deformation cost function
 
-    centroidDistance = np.linalg.norm(target.boundingBox.centroid - candidate.boundingBox.centroid)
+    centroidDifference = target.boundingBox.centroid - candidate.boundingBox.centroid
+    extentsDistance = target.boundingBox.extents - candidate.boundingBox.extents
 
-    extentsDistance = np.linalg.norm(target.boundingBox.extents - candidate.boundingBox.extents)
+    rotationDistance = 0
 
-    rotationDifference = np.matmul(target.boundingBox.rotation, np.transpose(candidate.boundingBox.rotation))
-    rotationDistance = math.acos((abs(np.trace(rotationDifference)) - 1) / 2)
+    weights = [1.0, 1.0, 0.0]
+
+    return np.sum(weights[0] * np.square(centroidDifference) + weights[1] * np.square(extentsDistance) + weights[2] * rotationDistance)
+
+    # rotationTarget = np.delete(np.delete(target.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    # rotationCandidate = np.delete(np.delete(candidate.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    # rotationDifference = np.matmul(np.transpose(rotationCandidate), rotationTarget)
+    # rotationDifferenceTrace = np.trace(rotationDifference)
+    # if rotationDifferenceTrace > 1.0 :
+    #     rotationDifferenceTrace = 1.0
+    # if rotationDifferenceTrace < -1.0 :
+    #     rotationDifferenceTrace = -1.0
+    # rotationDistance = math.acos((rotationDifferenceTrace - 1.0) / 2.0)
 
     # Need to come up with a better function or a better way to tune the weights
-    weights = [1.0, 1.0, 0.25]
-
-    return weights[0] * centroidDistance + weights[1] * extentsDistance + weights[2] * rotationDistance
 
 def matchOBB(target, candidate, mesh):
     # Transforms the candidate mesh so its obb matches the obb of the target
@@ -53,10 +64,10 @@ def matchOBB(target, candidate, mesh):
               [0,0,1,-canCent[2]],
               [0,0,0,1]])
 
-    rot = np.transpose(candidate.boundingBox.rotation)
-    canRotInv = np.array([[rot[0][0],rot[0][1],rot[0][2],0],
-              [rot[1][0],rot[1][1],rot[1][2],0],
-              [rot[2][0],rot[2][1],rot[2][2],0],
+    rotationCandidate = np.delete(np.delete(candidate.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    canRotInv = np.array([[rotationCandidate[0][0],rotationCandidate[0][1],rotationCandidate[0][2],0],
+              [rotationCandidate[1][0],rotationCandidate[1][1],rotationCandidate[1][2],0],
+              [rotationCandidate[2][0],rotationCandidate[2][1],rotationCandidate[2][2],0],
               [0,0,0,1]])
 
     scale = np.array([[scaleExtents[0],0,0,0],
@@ -64,10 +75,10 @@ def matchOBB(target, candidate, mesh):
               [0,0,scaleExtents[2],0],
               [0,0,0,1]])
 
-    rot = target.boundingBox.rotation
-    tarRot = np.array([[rot[0][0],rot[0][1],rot[0][2],0],
-              [rot[1][0],rot[1][1],rot[1][2],0],
-              [rot[2][0],rot[2][1],rot[2][2],0],
+    rotationTarget = np.delete(np.delete(target.boundingBox.principal_inertia_transform, 3, 0), 3, 1)
+    tarRot = np.array([[rotationTarget[0][0],rotationTarget[0][1],rotationTarget[0][2],0],
+              [rotationTarget[1][0],rotationTarget[1][1],rotationTarget[1][2],0],
+              [rotationTarget[2][0],rotationTarget[2][1],rotationTarget[2][2],0],
               [0,0,0,1]])
 
     orgToTar = np.array([[1,0,0,tarCent[0]],
@@ -179,7 +190,7 @@ if __name__ == '__main__':
 
         # FOR DEBUGING: Save the obb mesh
         boundingBox = templatePart.boundingBox
-        selectedObb = obb.convertObbToMesh(boundingBox);
+        selectedObb = trimesh_obb.convertObbToMesh(boundingBox);
         if obbMesh == None:
             obbMesh = selectedObb
         else :

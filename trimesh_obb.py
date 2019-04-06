@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import trimesh as tri
+import pymesh
 from os import listdir, path
 
 '''
@@ -18,7 +19,12 @@ Fields
 
 def getOBB(objFile):
 	mesh = tri.load_mesh(objFile)
-	
+
+	im_obb = mesh.bounding_box_oriented
+	obb = tri.creation.box(im_obb.primitive.extents, im_obb.primitive.transform)
+	return obb
+
+def convertMeshToObb(mesh):
 	im_obb = mesh.bounding_box_oriented
 	obb = tri.creation.box(im_obb.primitive.extents, im_obb.primitive.transform)
 	return obb
@@ -66,8 +72,8 @@ def icpMatrixCost(mesh, other_mesh, samples=500, scale=True, icp_first=10, icp_f
 
 
 '''
-Perform  Procrustes' analysis. Finds transformation T mapping 
-	(a) the points of mesh to 
+Perform  Procrustes' analysis. Finds transformation T mapping
+	(a) the points of mesh to
 	(b) the points of other_mesh
 minimizing square sum distances between T*a and b
 
@@ -115,4 +121,3 @@ if __name__ == '__main__':
 	print(t)
 	print(c)
 	print(p)
-	
