@@ -9,3 +9,10 @@ Requirements:
  - [PyMesh](https://pymesh.readthedocs.io/en/latest/#)
  - [LeChairs](https://drive.google.com/file/d/19p7GjhSbcBYy6VUbuMHugcqD1tkQfl6-/view)
      - Place the LeChairs folder into the base directory of the repo
+ - [Trimesh](https://trimsh.org/trimesh.html#github-com-mikedh-trimesh)
+ 	 - Installation:
+ 	 	- `pip3 install trimesh`
+ 	 	- show() requires pyglet: `pip3 install pyglet`
+ 	 	- trimesh.registration package requires rtree `pip3 install rtree`, `sudo apt install python3-rtree`
+
+
