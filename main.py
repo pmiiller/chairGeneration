@@ -249,4 +249,4 @@ if __name__ == '__main__':
             createViews.createViews(file, chairCount)
             chairCount += 3
 
-        LeChairs.evaluate_sample.main(new_chair_bmp)
+        LeChairs.evaluate_sample.main("new_chair_bmp/")
