@@ -6,15 +6,13 @@ import sys
 import random
 import math
 import numpy as np
-# import obb
 import trimesh as tri
 import trimesh_obb
+import createViews
+import LeChairs.evaluate_sample
 
-templates = []
-parts = []
 Template = namedtuple("Template", "dir templateParts")
 TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox")
-
 
 def computeOBB(pymesh):
     trimesh = trimesh_obb.convertPymeshToTrimesh(pymesh);
@@ -135,12 +133,9 @@ def connectPartToMesh(mesh, part):
 
     return pymesh.form_mesh(newVertices, selectedMesh.faces)
 
-if __name__ == '__main__':
-    randomTemplate = True
-    templateDirName = ""
-    if len(sys.argv) > 1:
-        randomTemplate = False
-        templateDirName = str(sys.argv[1])
+def loadTemplates():
+    templates = []
+    parts = []
 
     # Read all parts for all chairs and create the templates
     chairDirs = [f for f in listdir("last_examples") if isdir(join("last_examples", f))]
@@ -156,24 +151,10 @@ if __name__ == '__main__':
             parts.append(newTemplatePart)
         templates.append(newTemplate)
 
-    selectedTemplate = None
-    if randomTemplate:
-        # Select a random template
-        index = random.randint(0, len(templates)-1)
-        selectedTemplate = templates[index]
-    else:
-        # Select the template specified by the user
-        index = 0
-        while selectedTemplate == None and index != len(templates):
-            if templates[index].dir == templateDirName:
-                selectedTemplate = templates[index]
-            index += 1
-        if index == len(templates):
-            print("Error: ", templateDirName, " is not valid.")
-            sys.exit(0)
-    print("selectedTemplate: ", selectedTemplate.dir)
+    return [templates, parts]
 
-    # For each part in that template, pick the part with the lowest deformation cost
+def generateForTemplate(selectedTemplate, parts):
+    # For each part in the selected template, pick the part with the lowest deformation cost
     newMesh = None
     obbMesh = None
     for templatePart in selectedTemplate.templateParts:
@@ -206,5 +187,66 @@ if __name__ == '__main__':
             # selectedMesh = connectPartToMesh(newMesh, selectedMesh)
             newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
 
-    pymesh.save_mesh("newChair.obj", newMesh);
     pymesh.save_mesh("obbChair.obj", obbMesh);
+    return newMesh
+
+if __name__ == '__main__':
+    randomTemplate = True
+    doAll = False
+    evalOnly = False
+    templateDirName = ""
+    if len(sys.argv) > 1:
+        randomTemplate = False
+        templateDirName = str(sys.argv[1])
+        if templateDirName == "all":
+            doAll = True
+        elif templateDirName == "eval":
+            LeChairs.evaluate_sample.main("new_chair_bmp/")
+            sys.exit()
+
+    print("Beginning Generation Script")
+
+    loadedTemplates = loadTemplates()
+    templates = loadedTemplates[0]
+    parts = loadedTemplates[1]
+    print("Templates Loaded")
+
+    if not doAll:
+        selectedTemplate = None
+        if randomTemplate:
+            # Select a random template
+            index = random.randint(0, len(templates)-1)
+            selectedTemplate = templates[index]
+        else:
+            # Select the template specified by the user
+            index = 0
+            while selectedTemplate == None and index != len(templates):
+                if templates[index].dir == templateDirName:
+                    selectedTemplate = templates[index]
+                index += 1
+            if index == len(templates):
+                print("Error: " + templateDirName + " is not valid.")
+                sys.exit(0)
+        print("Template Selected: " + selectedTemplate.dir)
+
+        newMesh = generateForTemplate(selectedTemplate, parts)
+        print("New Chair Generated")
+
+        pymesh.save_mesh("newChair.obj", newMesh);
+
+        createViews.createViews("newChair.obj", 1)
+
+    else:
+        newChairDir = 'new_chair_obj'
+        chairCount = 1
+        for template in templates:
+            print("Generating Chair for: " + template.dir)
+            newMesh = generateForTemplate(template, parts)
+            print("New Chair Generated")
+
+            file = newChairDir + "/" + template.dir + ".obj"
+            pymesh.save_mesh(file, newMesh);
+            createViews.createViews(file, chairCount)
+            chairCount += 3
+
+        LeChairs.evaluate_sample.main(new_chair_bmp)

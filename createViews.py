@@ -8,7 +8,7 @@ from PIL import Image, ImageDraw
 #axis = 0: x, side view
 #axis = 1: y, top view
 #axis = 2: z, front view
-def averageTriangleDepth(triangle, v0, v1, v2, axis):	
+def averageTriangleDepth(triangle, v0, v1, v2, axis):
 
 	v0Depth = v0[axis]
 	v1Depth = v1[axis]
@@ -90,8 +90,8 @@ def createViews(filename, chairCount):
 	maxZ += 0.5
 
 	#array for each triangle to store its points and color assigned to it
-	dt = np.dtype([('p0X', int), ('p0Y', int), 
-				   ('p1X', int), ('p1Y', int), 
+	dt = np.dtype([('p0X', int), ('p0Y', int),
+				   ('p1X', int), ('p1Y', int),
 				   ('p2X', int), ('p2Y', int), ('color', int)])
 	triFront = np.empty((mesh.num_faces), dtype = dt)
 	triTop = np.empty((mesh.num_faces), dtype = dt)
@@ -102,7 +102,7 @@ def createViews(filename, chairCount):
 		v1 = mesh.vertices[triangle[1]]
 		v2 = mesh.vertices[triangle[2]]
 
-		distX = getDistOfTriangle(O, triangle, v0, v1, v2, 0) #side 
+		distX = getDistOfTriangle(O, triangle, v0, v1, v2, 0) #side
 		distY = getDistOfTriangle(O, triangle, v0, v1, v2, 1) #front
 		distZ = getDistOfTriangle(O, triangle, v0, v1, v2, 2) #top
 
@@ -138,19 +138,19 @@ def createViews(filename, chairCount):
 
 	#iterate through triangles starting with lightest shade
 	for i in range(mesh.num_faces-1, -1, -1):
-		drawTop.polygon([(triTop[i][0], triTop[i][1]), 
-						 (triTop[i][2], triTop[i][3]), 
-						 (triTop[i][4], triTop[i][5])], 
+		drawTop.polygon([(triTop[i][0], triTop[i][1]),
+						 (triTop[i][2], triTop[i][3]),
+						 (triTop[i][4], triTop[i][5])],
 						 fill = (triTop[i][6], triTop[i][6], triTop[i][6]))
 
-		drawFront.polygon([(triFront[i][0], triFront[i][1]), 
-						 (triFront[i][2], triFront[i][3]), 
-						 (triFront[i][4], triFront[i][5])], 
+		drawFront.polygon([(triFront[i][0], triFront[i][1]),
+						 (triFront[i][2], triFront[i][3]),
+						 (triFront[i][4], triFront[i][5])],
 						 fill = (triFront[i][6], triFront[i][6], triFront[i][6]))
 
-		drawSide.polygon([(triSide[i][0], triSide[i][1]), 
-						 (triSide[i][2], triSide[i][3]), 
-						 (triSide[i][4], triSide[i][5])], 
+		drawSide.polygon([(triSide[i][0], triSide[i][1]),
+						 (triSide[i][2], triSide[i][3]),
+						 (triSide[i][4], triSide[i][5])],
 						 fill = (triSide[i][6], triSide[i][6], triSide[i][6]))
 
 
@@ -159,16 +159,14 @@ def createViews(filename, chairCount):
 	imgFront.save('new_chair_bmp/' + str(chairCount+2) + '.bmp')
 
 
+if __name__ == '__main__':
+	indir = 'new_chair_obj'
+	fileList = os.listdir(indir)
+	print(fileList)
 
-indir = 'new_chair_obj'
-fileList = os.listdir(indir)
-print(fileList)
+	chairCount = 1
+	for chair in fileList:
+		file = indir + '/' + chair
 
-chairCount = 1
-for chair in fileList:
-	file = indir + '/' + chair
-
-	createViews(file, chairCount)
-	chairCount+=3
-
-
+		createViews(file, chairCount)
+		chairCount+=3
