@@ -7,6 +7,7 @@ import random
 import math
 import numpy as np
 # import obb
+import trimesh as tri
 import trimesh_obb
 
 templates = []
@@ -24,20 +25,23 @@ def calculateDeformationCost(target, candidate):
     # TODO need to come up with a better deformation cost function
 
     centroidDifference = target.boundingBox.centroid - candidate.boundingBox.centroid
-    extentsDifference = target.boundingBox.extents - candidate.boundingBox.extents
+
+    tarExtents = tri.bounds.oriented_bounds(target.boundingBox)[1]
+    canExtents = tri.bounds.oriented_bounds(candidate.boundingBox)[1]
+    extentsDifference = tarExtents - canExtents
 
     rotationTarget = np.delete(np.delete(target.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
     rotationCandidate = np.delete(np.delete(candidate.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
     rotationDifference = np.matmul(rotationCandidate, np.transpose(rotationTarget))
     rotationDifferenceTrace = np.trace(rotationDifference)
-    if rotationDifferenceTrace > 1.0 :
-        rotationDifferenceTrace = 1.0
+    if rotationDifferenceTrace > 3.0 :
+        rotationDifferenceTrace = 3.0
     if rotationDifferenceTrace < -1.0 :
         rotationDifferenceTrace = -1.0
     rotationDistance = math.acos((rotationDifferenceTrace - 1.0) / 2.0)
 
     # Need to come up with a better function or a better way to tune the weights
-    weights = [1.0, 1.0, 1.0]
+    weights = [1.0, 1.0, 0.0]
 
     return np.sum(weights[0] * np.square(centroidDifference) + weights[1] * np.square(extentsDifference) + weights[2] * np.square(rotationDistance))
 
@@ -47,8 +51,11 @@ def matchOBB(target, candidate, mesh):
 
     tarCent = target.boundingBox.centroid
     canCent = candidate.boundingBox.centroid
-    tarExtents = target.boundingBox.extents
-    canExtents = candidate.boundingBox.extents
+    # tarExtents = target.boundingBox.extents
+    # canExtents = candidate.boundingBox.extents
+    tarExtents = tri.bounds.oriented_bounds(target.boundingBox)[1]
+    canExtents = tri.bounds.oriented_bounds(candidate.boundingBox)[1]
+
     scaleExtents = tarExtents / canExtents;
 
     transform = np.array([[1,0,0,0],
@@ -91,7 +98,7 @@ def matchOBB(target, candidate, mesh):
 
     transform = np.matmul(transform, orgToTar)
     transform = np.matmul(transform, tarRot)
-    # transform = np.matmul(transform, scale)
+    transform = np.matmul(transform, scale)
     transform = np.matmul(transform, canRotInv)
     transform = np.matmul(transform, canToOrg)
 
