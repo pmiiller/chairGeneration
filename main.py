@@ -9,7 +9,7 @@ import numpy as np
 import trimesh as tri
 import trimesh_obb
 import createViews
-import LeChairs.evaluate_sample
+import evaluate_sample
 
 Template = namedtuple("Template", "dir templateParts")
 TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox")
@@ -201,7 +201,8 @@ if __name__ == '__main__':
         if templateDirName == "all":
             doAll = True
         elif templateDirName == "eval":
-            LeChairs.evaluate_sample.main("new_chair_bmp/")
+            scores = evaluate_sample.tfRun("new_chair_bmp/")
+            print(scores)
             sys.exit()
 
     print("Beginning Generation Script")
@@ -249,4 +250,5 @@ if __name__ == '__main__':
             createViews.createViews(file, chairCount)
             chairCount += 3
 
-        LeChairs.evaluate_sample.main("new_chair_bmp/")
+        scores = evaluate_sample.tfRun("new_chair_bmp/")
+        print(scores)

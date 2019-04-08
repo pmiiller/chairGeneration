@@ -1,8 +1,6 @@
-LeChairs/__pycache__
-LeChairs/.idea
-LeChairs/chairs-data
-LeChairs/checkpoint
-LeChairs/evaluate-chairs
+__pycache__
+chairs-data
+checkpoint
 venv
 *.obj
 *.pyc
