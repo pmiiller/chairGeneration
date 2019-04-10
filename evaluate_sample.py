@@ -76,7 +76,6 @@ def main(*argv):
     test_evaluations = [[],[],[]]
 
     for view in ["Top", "Front", "Side"]:
-        print(view)
         id = ["Top", "Front", "Side"].index(view)
 
 
@@ -100,9 +99,6 @@ def main(*argv):
         # This is how you extract the correlation to the positive class of the first element in your evaluation folder
         for eval in eval_results:
             #print("probability that this instance is positive is %3.2f " % eval['probabilities'][1])
-            print(view)
-            print(id)
-            print(eval)
             test_evaluations[id].append(eval['probabilities'][1])
 
     #the probability that the chair is a positive example is given by the minimum of the probabilities from each of the three views
