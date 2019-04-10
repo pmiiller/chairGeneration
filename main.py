@@ -11,6 +11,7 @@ import trimesh_obb
 import createViews
 import evaluate_sample
 import operator
+import pickle
 
 Template = namedtuple("Template", "dir templateParts")
 TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox orientedExtents")
@@ -182,16 +183,45 @@ def generateForTemplate(selectedTemplate, parts):
     # For each part in the selected template, pick the part with the lowest deformation cost
     newMesh = None
     obbMesh = None
+    clustering = []
+    # open cluster file
+    try:
+        with open("clusterings", 'rb') as f:
+            clustering = pickle.load(f)
+            print('Sucessfully found clustering file')
+        useCluster = True
+    except:
+        useCluster = False
+        
     for templatePart in selectedTemplate.templateParts:
         # Select the part that has the obb that best fits the obb of the template part
-        selectedPart = None
-        minDeformationCost = sys.float_info.max
-        for part in parts:
-            if part.dir != templatePart.dir:
-                deformationCost = calculateDeformationCost(templatePart, part)
+
+        if useCluster == True:
+            # find the closest cluster representative to the part and select a random cluster member
+            selectedPart = None
+            minDeformationCost = sys.float_info.max
+            for cluster in clustering:
+                deformationCost = calculateDeformationCost(templatePart, cluster[0])
                 if deformationCost < minDeformationCost:
                     minDeformationCost = deformationCost
-                    selectedPart = part
+                    randomMember = random.randint(0,len(cluster)-1)
+                    #print('len = ',len(cluster), ' rand = ',randomMember)
+                    selectedPart = cluster[randomMember]
+                #print("cost: ",deformationCost, "mincost: ",minDeformationCost)
+                
+
+        else:
+            # use a closest fitting part if there is no file for clusters
+            selectedPart = None
+            minDeformationCost = sys.float_info.max
+            for part in parts:
+                if part.dir != templatePart.dir:
+                    deformationCost = calculateDeformationCost(templatePart, part)
+                    if deformationCost < minDeformationCost:
+                        minDeformationCost = deformationCost
+                        selectedPart = part
+
+                        
         selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
         # FOR DEBUGING: add the part to the obb mesh
@@ -313,3 +343,4 @@ if __name__ == '__main__':
             scores = np.delete(scores, index)
             mesh = pymesh.load_mesh(newChairDir + "/" + scoredChair)
             pymesh.save_mesh(rankedChairDir + "/" + str(i + 1) + ".obj", mesh)
+
