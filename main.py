@@ -22,8 +22,6 @@ def computeOBB(pymesh):
     return boundingBox
 
 def calculateDeformationCost(target, candidate):
-    # TODO need to come up with a better deformation cost function
-
     centroidDifference = target.boundingBox.centroid - candidate.boundingBox.centroid
 
     tarExtents = tri.bounds.oriented_bounds(target.boundingBox)[1]
@@ -111,6 +109,16 @@ def matchOBB(target, candidate, mesh):
 
     return pymesh.form_mesh(newVertices, mesh.faces)
 
+def calculateDeformationCostProcrustes(target, candidate):
+    t, _, c = trimesh_obb.procrustesMatrixCost(candidate.boundingBox, target.boundingBox)
+    return t, c
+
+def matchOBBProcrustes(mesh, transform):
+    t_candidate = trimesh_obb.convertPymeshToTrimesh(mesh).copy()
+    t_candidate.apply_transform(transform)
+
+    return pymesh.form_mesh(t_candidate.vertices, t_candidate.faces)
+
 def connectPartToMesh(mesh, part):
     # ensures basic connectivity
     # there is probably a better way to connect
@@ -154,6 +162,23 @@ def loadTemplates():
         templates.append(newTemplate)
 
     return [templates, parts]
+
+def addToNewMesh(newMesh, selectedMesh):
+    if newMesh == None:
+        newMesh = selectedMesh
+    else :
+        # selectedMesh = connectPartToMesh(newMesh, selectedMesh)
+        newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
+    return newMesh
+
+def addToObbMesh(obbMesh, templatePart):
+    boundingBox = templatePart.boundingBox
+    selectedObb = trimesh_obb.convertObbToMesh(boundingBox);
+    if obbMesh == None:
+        obbMesh = selectedObb
+    else :
+        obbMesh = pymesh.merge_meshes([obbMesh, selectedObb])
+    return obbMesh
 
 def generateForTemplate(selectedTemplate, parts):
     # For each part in the selected template, pick the part with the lowest deformation cost
@@ -200,23 +225,43 @@ def generateForTemplate(selectedTemplate, parts):
                         
         selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
-        # FOR DEBUGING: Save the obb mesh
-        boundingBox = templatePart.boundingBox
-        selectedObb = trimesh_obb.convertObbToMesh(boundingBox);
-        if obbMesh == None:
-            obbMesh = selectedObb
-        else :
-            obbMesh = pymesh.merge_meshes([obbMesh, selectedObb])
+        # FOR DEBUGING: add the part to the obb mesh
+        obbMesh = addToObbMesh(obbMesh, templatePart)
 
         # transform the selectedMesh so the OBB matches the templatePart's OBB
         selectedMesh = matchOBB(templatePart, selectedPart, selectedMesh)
 
         # add the selectedMesh to the newMesh
-        if newMesh == None:
-            newMesh = selectedMesh
-        else :
-            # selectedMesh = connectPartToMesh(newMesh, selectedMesh)
-            newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
+        newMesh = addToNewMesh(newMesh, selectedMesh)
+
+    pymesh.save_mesh("obbChair.obj", obbMesh);
+    return newMesh
+
+def generateForTemplateProcrustes(selectedTemplate, parts):
+    # For each part in the selected template, pick the part with the lowest deformation cost
+    newMesh = None
+    obbMesh = None
+    for templatePart in selectedTemplate.templateParts:
+        # Select the part that has the obb that best fits the obb of the template part
+        selectedPart = None
+        minDeformationCost = sys.float_info.max
+        for part in parts:
+            if part.dir != templatePart.dir:
+                t, deformationCost = calculateDeformationCostProcrustes(templatePart, part)
+                if deformationCost < minDeformationCost:
+                    minDeformationCost = deformationCost
+                    selectedPart = part
+                    minTransform = t
+        selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
+
+        # FOR DEBUGING: add the part to the obb mesh
+        obbMesh = addToObbMesh(obbMesh, templatePart)
+
+        # transform the selectedMesh using procrustes transform
+        selectedMesh = matchOBBProcrustes(selectedMesh, minTransform)
+
+        # add the selectedMesh to the newMesh
+        newMesh = addToNewMesh(newMesh, selectedMesh)
 
     pymesh.save_mesh("obbChair.obj", obbMesh);
     return newMesh
