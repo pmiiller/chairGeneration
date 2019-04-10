@@ -49,7 +49,9 @@ def load(dimension, directory = "evaluate-chairs/"):
     return imagesTop, imagesFront, imagesSide
 
 def main(*argv):
-    directory = argv[0]
+    directory = "new_chair_bmp/"
+    if len(argv) > 0 and argv[0][-1:] == "/":
+        directory = argv[0]
 
     #load chairs dataset
     imagesTop, imagesFront, imagesSide = load(56, directory)

@@ -1,5 +1,12 @@
 # CMPT 464 Final Project - Chair Generation
 
+## main.py instructions
+ - `python main.py` to generate a single chair with a random template
+ - `python main.py <chairDirectoryName>` to generate a single chair with a specified template
+ - `python main.py all` to generate a chair for all templates and then score them
+ - `python main.py eval` to evaluate a sample of already generated chairs
+
+
 Download the LeChairs scorer from [here](https://drive.google.com/file/d/19p7GjhSbcBYy6VUbuMHugcqD1tkQfl6-/view).
 
 Instructions for setting up PyMesh can be found [here](settingUpPymesh.txt).
