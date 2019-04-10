@@ -13,7 +13,7 @@ import evaluate_sample
 import operator
 
 Template = namedtuple("Template", "dir templateParts")
-TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox")
+TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox orientedExtents")
 
 def computeOBB(pymesh):
     trimesh = trimesh_obb.convertPymeshToTrimesh(pymesh);
@@ -23,8 +23,8 @@ def computeOBB(pymesh):
 def calculateDeformationCost(target, candidate):
     centroidDifference = target.boundingBox.centroid - candidate.boundingBox.centroid
 
-    tarExtents = tri.bounds.oriented_bounds(target.boundingBox)[1]
-    canExtents = tri.bounds.oriented_bounds(candidate.boundingBox)[1]
+    tarExtents = target.orientedExtents
+    canExtents = candidate.orientedExtents
     extentsDifference = tarExtents - canExtents
 
     rotationTarget = np.delete(np.delete(target.boundingBox.bounding_box_oriented.primitive.transform, 3, 0), 3, 1)
@@ -48,10 +48,8 @@ def matchOBB(target, candidate, mesh):
 
     tarCent = target.boundingBox.centroid
     canCent = candidate.boundingBox.centroid
-    # tarExtents = target.boundingBox.extents
-    # canExtents = candidate.boundingBox.extents
-    tarExtents = tri.bounds.oriented_bounds(target.boundingBox)[1]
-    canExtents = tri.bounds.oriented_bounds(candidate.boundingBox)[1]
+    tarExtents = target.orientedExtents
+    canExtents = candidate.orientedExtents
 
     scaleExtents = tarExtents / canExtents;
 
@@ -155,7 +153,8 @@ def loadTemplates():
         for chairPart in chairParts:
             mesh = pymesh.load_mesh(chairMeshes + "/" + chairPart)
             boundingBox = computeOBB(mesh)
-            newTemplatePart = TemplatePart(chairDir, chairPart, boundingBox)
+            orientedExtents = tri.bounds.oriented_bounds(boundingBox)[1]
+            newTemplatePart = TemplatePart(chairDir, chairPart, boundingBox, orientedExtents)
             newTemplate.templateParts.append(newTemplatePart)
             parts.append(newTemplatePart)
         templates.append(newTemplate)
