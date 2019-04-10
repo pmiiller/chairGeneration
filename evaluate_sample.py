@@ -49,7 +49,7 @@ def load(dimension, directory = "evaluate-chairs/"):
     return imagesTop, imagesFront, imagesSide
 
 def main(*argv):
-    directory = argv[0][0]
+    directory = argv[0]
 
     #load chairs dataset
     imagesTop, imagesFront, imagesSide = load(56, directory)
@@ -94,11 +94,7 @@ def main(*argv):
 
     return evaluation_chairs
 
-def tfRun(directory = "evaluate-chairs/"):
-    tf.app.run(main, [directory])
-
 if __name__ == "__main__":
     # Add ops to save and restore all the variables.
     # saver = tf.train.Saver()
-    # tf.app.run()
-    tfRun()
+    tf.app.run()

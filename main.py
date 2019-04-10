@@ -10,6 +10,7 @@ import trimesh as tri
 import trimesh_obb
 import createViews
 import evaluate_sample
+import operator
 
 Template = namedtuple("Template", "dir templateParts")
 TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox")
@@ -191,6 +192,9 @@ def generateForTemplate(selectedTemplate, parts):
     return newMesh
 
 if __name__ == '__main__':
+    newChairDir = 'new_chair_obj'
+    rankedChairDir = 'ranked_chair_obj'
+
     randomTemplate = True
     doAll = False
     evalOnly = False
@@ -201,8 +205,15 @@ if __name__ == '__main__':
         if templateDirName == "all":
             doAll = True
         elif templateDirName == "eval":
-            scores = evaluate_sample.tfRun("new_chair_bmp/")
-            print(scores)
+            scores = evaluate_sample.main("new_chair_bmp/")
+            fileList = listdir(newChairDir)
+            fileList.sort()
+            for i in range(0, len(fileList)):
+                index, value = max(enumerate(scores), key=operator.itemgetter(1))
+                scoredChair = fileList.pop(index)
+                scores = np.delete(scores, index)
+                mesh = pymesh.load_mesh(newChairDir + "/" + scoredChair)
+                pymesh.save_mesh(rankedChairDir + "/" + str(i + 1) + ".obj", mesh)
             sys.exit()
 
     print("Beginning Generation Script")
@@ -238,17 +249,23 @@ if __name__ == '__main__':
         createViews.createViews("newChair.obj", 1)
 
     else:
-        newChairDir = 'new_chair_obj'
         chairCount = 1
-        for template in templates:
+        for index, template in enumerate(templates):
             print("Generating Chair for: " + template.dir)
             newMesh = generateForTemplate(template, parts)
             print("New Chair Generated")
 
-            file = newChairDir + "/" + template.dir + ".obj"
+            file = newChairDir + "/" + str(index + 1).zfill(4) + "_" + template.dir + ".obj"
             pymesh.save_mesh(file, newMesh);
             createViews.createViews(file, chairCount)
             chairCount += 3
 
-        scores = evaluate_sample.tfRun("new_chair_bmp/")
-        print(scores)
+        scores = evaluate_sample.main("new_chair_bmp/")
+        fileList = listdir(newChairDir)
+        fileList.sort()
+        for i in range(0, len(templates)):
+            index, value = max(enumerate(scores), key=operator.itemgetter(1))
+            scoredChair = fileList.pop(index)
+            scores = np.delete(scores, index)
+            mesh = pymesh.load_mesh(newChairDir + "/" + scoredChair)
+            pymesh.save_mesh(rankedChairDir + "/" + str(i + 1) + ".obj", mesh)
