@@ -1,35 +1,31 @@
-# first test k median method
-# to be updated later to match mesh
+# generates clusterings of parts based on the k medians method
 # algorithm from CMPT459 
 import cv2 
 import numpy as np
 import os, os.path
 import random
 import copy
+import pickle
 
-maxNeighbour = 10 # num of max randomly chosen pairs of non mediod and mediod
-numlocal = 10 # number of initial points to attempt to select
-k = 6
+from main import calculateDeformationCost # import cost function from main
 
-# temp example:
+from main import loadTemplates
 
-data = [2,2,2,2,3,14,14,15,16,27,28,28,28,29,39,40,40,4,42,44,64,64,66,67,100,101,111]
-print(len(data))
-rdata = random.sample(data, len(data))
-print(rdata)
-
-def distance(item1,item2):
-    return abs(item1-item2)
-
-#------
+# num of max randomly chosen pairs of non mediod and mediod
+# max number of meaningless tries
+maxNeighbour = 10 
+numlocal = 5 # number of initial points to attempt to select
+k = 12 
 
 
-def reAssignClusters(clusters):
+
+
+def reAssignClusters(clusters,data):
     k = len(clusters)
     centroids = [[0 for i in range(1)] for j in range(k)]
     for i in range(k):
         centroids[i][0] = clusters[i][0]
-
+        
     return assignClusters(k,centroids,data)
 
         
@@ -37,11 +33,15 @@ def reAssignClusters(clusters):
 def assignClusters(k,centroids,data):
     #remove duplicates of centroid and data
     tmpdata = copy.deepcopy(data)
+
     for i in centroids:
-        tmpdata.remove(i[0])
+        tmp = [m for m in tmpdata if (m.dir != i[0].dir or m.obj !=i[0].obj )]
+        tmpdata = tmp
 
 
-
+    #print(tmpdata)
+    #print('tmpdata len = ',len(tmpdata))
+    #print('data len = ',len(data))
     clusters = centroids
     # for each object in data assign it to nearest cluster
 
@@ -50,7 +50,7 @@ def assignClusters(k,centroids,data):
         minCost = 999
         c = 0
         for i in range(k):
-            cost = distance(tmpdata[j],clusters[i][0])
+            cost = calculateDeformationCost(tmpdata[j],clusters[i][0])
             
             if cost<minCost:
                 minCost = cost
@@ -67,7 +67,7 @@ def singleTotalDistance(cluster):
     clen = len(cluster)
     count = 0
     for i in range(1,clen-1):
-        count = count+distance(cluster[0],cluster[i])
+        count = count+calculateDeformationCost(cluster[0],cluster[i])
     return count
 
 
@@ -79,36 +79,28 @@ def totalDistance(clusters):
     return count
 
 
-def kmedian(k, dist, data):
 
 
-
-
-
+def kmedian(k, data):
 
     bestTD = 999999999
     bestClusters = []
+    
     for r in range(numlocal):
-        print('-----------------------------------------')
+        print('producing cluster--------------------------')
 
-        # randomly select k parts as centroid
+        # randomly select k parts as centroid and cluster
         centroids = [[0 for i in range(1)] for j in range(k)]
         # sample k values
         rdata = random.sample(data, k)
         for i in range(k):
             centroids[i][0] = rdata[i]
-
-
-        print ('centroids:')
-        print (centroids)
-
         clusters = assignClusters(k,centroids,data)
 
 
         #TD = # total distance of clustering
         TD = totalDistance(clusters)
-
-        print('TD = ',TD)
+        #print('TD = ',TD)
         
         i=0
         while i<maxNeighbour:
@@ -124,35 +116,57 @@ def kmedian(k, dist, data):
             clustersTemp[randk][0] = nonMedoid
             clustersTemp[randk][randi] = medoid
 
-            clustersTemp = reAssignClusters(clustersTemp)
+            clustersTemp = reAssignClusters(clustersTemp,data)
 
 
             TDswap = totalDistance(clustersTemp)
-            print('TD = ',TD)
-            print('TDswap = ',TDswap)
+            #print('TD = ',TD,' TDswap = ',TDswap)
+
 
             # if new assignment gives lower cost, update cluster
             if TDswap<TD:
-                print(TD-TDswap)
-                print(clustersTemp)
+                #print('cost is improved by: ',TD-TDswap)
                 clusters = clustersTemp
                 TD = TDswap
             else:
                 i=i+1
+        print('the cost of this cluster is:',TD)
         if TD < bestTD:
             bestTD = TD
             bestClusters = clusters
         
 
     print('================================')
-    print('bestTD = ',bestTD)
-    print('bestclusters: ')
-    print(bestClusters)
-
-    return 
+    print('best Total Distance = ',bestTD)
 
 
-    
+    print('Finished creating clusters')
+    clustering = reAssignClusters(bestClusters,data)
 
-kmedian(k,2,rdata)
+    return clustering
+
+
+# ========================DONE DEFINING FCN
+
+templates = []
+parts = []
+
+  
+loadedTemplates = loadTemplates()
+templates = loadedTemplates[0]
+parts = loadedTemplates[1]
+
+print('the length of parts is: ',len(parts))
+
+
+clusterings = kmedian(k,parts)
+
+
+
+with open("clusterings", 'wb') as f:
+    pickle.dump(clusterings, f)
+
+with open("clusterings", 'rb') as f:
+    aaa = pickle.load(f)
+
 
