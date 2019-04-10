@@ -184,7 +184,14 @@ def generateForTemplate(selectedTemplate, parts):
     newMesh = None
     obbMesh = None
     clustering = []
+    doneCreation = False
+    sampleChairBmp = "sample_chair/"
+    max_iter = 5
+    iterCreate = 0
+    possibleMesh = []
+    scores = []
     # open cluster file
+
     try:
         with open("clusterings", 'rb') as f:
             clustering = pickle.load(f)
@@ -192,46 +199,63 @@ def generateForTemplate(selectedTemplate, parts):
         useCluster = True
     except:
         useCluster = False
-        
-    for templatePart in selectedTemplate.templateParts:
-        # Select the part that has the obb that best fits the obb of the template part
-
-        if useCluster == True:
-            # find the closest cluster representative to the part and select a random cluster member
-            selectedPart = None
-            minDeformationCost = sys.float_info.max
-            for cluster in clustering:
-                deformationCost = calculateDeformationCost(templatePart, cluster[0])
-                if deformationCost < minDeformationCost:
-                    minDeformationCost = deformationCost
-                    randomMember = random.randint(0,len(cluster)-1)
-                    #print('len = ',len(cluster), ' rand = ',randomMember)
-                    selectedPart = cluster[randomMember]
-                #print("cost: ",deformationCost, "mincost: ",minDeformationCost)
-                
-
-        else:
-            # use a closest fitting part if there is no file for clusters
-            selectedPart = None
-            minDeformationCost = sys.float_info.max
-            for part in parts:
-                if part.dir != templatePart.dir:
-                    deformationCost = calculateDeformationCost(templatePart, part)
+      
+    while (not doneCreation) and (iterCreate < max_iter):  
+        newMesh = None
+        for templatePart in selectedTemplate.templateParts:
+            # Select the part that has the obb that best fits the obb of the template part
+            
+            if useCluster == True:
+                # find the closest cluster representative to the part and select a random cluster member
+                selectedPart = None
+                minDeformationCost = sys.float_info.max
+                for cluster in clustering:
+                    deformationCost = calculateDeformationCost(templatePart, cluster[0])
                     if deformationCost < minDeformationCost:
                         minDeformationCost = deformationCost
-                        selectedPart = part
+                        randomMember = random.randint(0,len(cluster)-1)
+                        #print('len = ',len(cluster), ' rand = ',randomMember)
+                        selectedPart = cluster[randomMember]
+                    #print("cost: ",deformationCost, "mincost: ",minDeformationCost)
+                    
 
-                        
-        selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
+            else:
+                # use a closest fitting part if there is no file for clusters
+                selectedPart = None
+                minDeformationCost = sys.float_info.max
+                for part in parts:
+                    if part.dir != templatePart.dir:
+                        randN = random.uniform(0, 1)
+                        deformationCost = calculateDeformationCost(templatePart, part) * randN
+                        if deformationCost < minDeformationCost:
+                            minDeformationCost = deformationCost
+                            selectedPart = part
+                            
+            selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
-        # FOR DEBUGING: add the part to the obb mesh
-        obbMesh = addToObbMesh(obbMesh, templatePart)
+            # FOR DEBUGING: add the part to the obb mesh
+            obbMesh = addToObbMesh(obbMesh, templatePart)
 
-        # transform the selectedMesh so the OBB matches the templatePart's OBB
-        selectedMesh = matchOBB(templatePart, selectedPart, selectedMesh)
+            # transform the selectedMesh so the OBB matches the templatePart's OBB
+            selectedMesh = matchOBB(templatePart, selectedPart, selectedMesh)
 
-        # add the selectedMesh to the newMesh
-        newMesh = addToNewMesh(newMesh, selectedMesh)
+            # add the selectedMesh to the newMesh
+            newMesh = addToNewMesh(newMesh, selectedMesh)
+
+        # creates views and scores
+        possibleMesh.append(newMesh)
+        pymesh.save_mesh("sample_mesh.obj", newMesh);
+        createViews.createViews("sample_mesh.obj", 1, sampleChairBmp)
+        score = evaluate_sample.main(sampleChairBmp)
+        scores.append(score[0])
+        doneCreation = score[0] >= 0.8 
+        print(score)
+        if iterCreate >= 5:
+            index = scores.index(max(scores))
+            newMesh = possibleMesh[index]
+        else:
+            iterCreate += 1
+
 
     pymesh.save_mesh("obbChair.obj", obbMesh);
     return newMesh

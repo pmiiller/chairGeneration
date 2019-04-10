@@ -30,7 +30,7 @@ def getMesh(filename):
 
 
 
-def createViews(filename, chairCount):
+def createViews(filename, chairCount, directory='new_chair_bmp/'):
 	mesh = getMesh(filename)
 	# mesh = getMesh("last_examples/ChairFancy2/fancyChair2.obj")
 	# mesh = pymesh.load_mesh("newChair.obj")
@@ -154,9 +154,9 @@ def createViews(filename, chairCount):
 						 fill = (triSide[i][6], triSide[i][6], triSide[i][6]))
 
 
-	imgSide.save('new_chair_bmp/' + str(chairCount) + '.bmp')
-	imgTop.save('new_chair_bmp/' + str(chairCount+1) + '.bmp')
-	imgFront.save('new_chair_bmp/' + str(chairCount+2) + '.bmp')
+	imgSide.save(directory + str(chairCount) + '.bmp')
+	imgTop.save(directory + str(chairCount+1) + '.bmp')
+	imgFront.save(directory + str(chairCount+2) + '.bmp')
 
 
 if __name__ == '__main__':

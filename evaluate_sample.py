@@ -61,7 +61,7 @@ def load(dimension, directory = "new_chair_bmp/"):
 
 def main(*argv):
     directory = "new_chair_bmp/"
-    if len(argv) > 0 and argv[0][-1:] == "/":
+    if len(argv) > 0:
         directory = argv[0]
 
     #load chairs dataset
