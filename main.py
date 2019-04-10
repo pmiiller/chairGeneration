@@ -39,9 +39,9 @@ def calculateDeformationCost(target, candidate):
     rotationDistance = math.acos((rotationDifferenceTrace - 1.0) / 2.0)
 
     # Need to come up with a better function or a better way to tune the weights
-    weights = [1.0, 1.0, 0.0]
-
-    return np.sum(weights[0] * np.square(centroidDifference) + weights[1] * np.square(extentsDifference) + weights[2] * np.square(rotationDistance))
+    weights = [0.3, 0.3, 0.0, 0.4]
+    t, c = calculateDeformationCostProcrustes(target, candidate)
+    return np.sum(weights[0] * np.square(centroidDifference) + weights[1] * np.square(extentsDifference) + weights[2] * np.square(rotationDistance) + weights[3] * c)
 
 def matchOBB(target, candidate, mesh):
     # Transforms the candidate mesh so its obb matches the obb of the target
@@ -186,7 +186,7 @@ def generateForTemplate(selectedTemplate, parts):
     clustering = []
     doneCreation = False
     sampleChairBmp = "sample_chair/"
-    max_iter = 5
+    max_iter = 10
     iterCreate = 0
     possibleMesh = []
     scores = []
@@ -248,13 +248,15 @@ def generateForTemplate(selectedTemplate, parts):
         createViews.createViews("sample_mesh.obj", 1, sampleChairBmp)
         score = evaluate_sample.main(sampleChairBmp)
         scores.append(score[0])
+        # print(scores)
+        iterCreate += 1
+
         doneCreation = score[0] >= 0.8 
-        print(score)
-        if iterCreate >= 5:
+        if iterCreate >= max_iter:
             index = scores.index(max(scores))
             newMesh = possibleMesh[index]
-        else:
-            iterCreate += 1
+            print(scores)
+            print(index)
 
 
     pymesh.save_mesh("obbChair.obj", obbMesh);
