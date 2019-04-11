@@ -147,12 +147,20 @@ def checkForSymmetry(part1, part2):
     part1Copy = part1.boundingBox.copy()
     part2Copy = part2.boundingBox.copy()
 
+    reflectX = np.array([
+        [-1,0,0,0],
+        [0,1,0,0],
+        [0,0,1,0],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(reflectX)
+
     center1 = np.array([
         [1,0,0,-part1Copy.centroid[0]],
         [0,1,0,0],
         [0,0,1,0],
         [0,0,0,1]])
-        
+
     center2 = np.array([
         [1,0,0,-part2Copy.centroid[0]],
         [0,1,0,0],
@@ -162,25 +170,17 @@ def checkForSymmetry(part1, part2):
     part1Copy.apply_transform(center1)
     part2Copy.apply_transform(center2)
 
-    reflectX = np.array([
-        [-1,0,0,0],
-        [0,1,0,0],
-        [0,0,1,0],
-        [0,0,0,1]])
-
-    part1Copy.apply_transform(reflectX)
-
     closestPointsX = tri.proximity.ProximityQuery(part1Copy).vertex(part2Copy.vertices)
     diffrenceX = np.sum(closestPointsX[0])
     # print(diffrenceX)
 
-    symmetryThreshold = 0.05
+    symmetryThreshold = 0.08
     symmetry = False
     if diffrenceX < symmetryThreshold:
         symmetry = True
     return symmetry
 
-def loadTemplates():
+def loadTemplatesWithoutPickle():
     templates = []
     parts = []
 
@@ -212,6 +212,21 @@ def loadTemplates():
 
     return [templates, parts]
 
+def loadTemplates():
+    templates = []
+    parts = []
+
+    try:
+        with open("templates", 'rb') as f:
+            templates, parts = pickle.load(f)
+            print('Sucessfully found templates file')
+            return [templates, parts]
+    except:
+        templates, parts = loadTemplatesWithoutPickleFile()
+        with open('templates', 'wb') as f:
+            pickle.dump([templates, parts], f)
+        return [templates, parts]
+
 def addToNewMesh(newMesh, selectedMesh):
     if newMesh == None:
         newMesh = selectedMesh
@@ -242,8 +257,8 @@ def generateForTemplate(selectedTemplate, parts):
     iterCreate = 0
     possibleMesh = []
     scores = []
-    # open cluster file
 
+    # open cluster file
     try:
         with open("clusterings", 'rb') as f:
             clustering = pickle.load(f)
@@ -251,13 +266,14 @@ def generateForTemplate(selectedTemplate, parts):
         useCluster = True
     except:
         useCluster = False
-      
-    while (not doneCreation) and (iterCreate < max_iter):  
+
+    while (not doneCreation) and (iterCreate < max_iter):
         newMesh = None
         lastScore = 0.0
-        for templatePart in selectedTemplate.templateParts:
+        templateParts = selectedTemplate.templateParts.copy()
+        for templatePart in templateParts:
             # Select the part that has the obb that best fits the obb of the template part
-            
+
             if useCluster == True:
                 # find the closest cluster representative to the part and select a random cluster member
                 selectedPart = None
@@ -270,7 +286,7 @@ def generateForTemplate(selectedTemplate, parts):
                         #print('len = ',len(cluster), ' rand = ',randomMember)
                         selectedPart = cluster[randomMember]
                     #print("cost: ",deformationCost, "mincost: ",minDeformationCost)
-                    
+
 
             else:
                 # use a closest fitting part if there is no file for clusters
@@ -297,7 +313,7 @@ def generateForTemplate(selectedTemplate, parts):
 
             # check for symmetries and use that to fill in parts of the template
             for symmetry in templatePart.symmetries:
-                if symmetry in selectedTemplate.templateParts:
+                if symmetry in templateParts:
                     canCent = templatePart.boundingBox.centroid
                     tarCent = symmetry.boundingBox.centroid
 
@@ -336,7 +352,7 @@ def generateForTemplate(selectedTemplate, parts):
                     symmetricMesh = pymesh.form_mesh(newVertices, newFaces)
                     newMesh = addToNewMesh(newMesh, symmetricMesh)
 
-                    selectedTemplate.templateParts.remove(symmetry)
+                    templateParts.remove(symmetry)
 
         # creates views and scores
         possibleMesh.append(newMesh)
@@ -347,7 +363,7 @@ def generateForTemplate(selectedTemplate, parts):
         # print(scores)
         iterCreate += 1
 
-        doneCreation = score[0] >= 0.8 
+        doneCreation = score[0] >= 0.8
         if iterCreate >= max_iter:
             index = scores.index(max(scores))
             newMesh = possibleMesh[index]
@@ -385,8 +401,9 @@ def generateForTemplateProcrustes(selectedTemplate, parts):
     return newMesh
 
 if __name__ == '__main__':
-    newChairDir = 'new_chair_obj'
-    rankedChairDir = 'ranked_chair_obj'
+    newBMPDir = 'new_chair_bmp/'
+    newChairDir = 'new_chair_obj/'
+    rankedChairDir = 'ranked_chair_obj/'
 
     randomTemplate = True
     doAll = False
@@ -398,15 +415,21 @@ if __name__ == '__main__':
         if templateDirName == "all":
             doAll = True
         elif templateDirName == "eval":
-            scores = evaluate_sample.main("new_chair_bmp/")
+            scores = evaluate_sample.main(newBMPDir)
             fileList = listdir(newChairDir)
             fileList.sort()
-            for i in range(0, len(fileList)):
+            fileListBmp = listdir(newBMPDir)
+            for i in range(0, int(len(fileListBmp) / 3)):
                 index, value = max(enumerate(scores), key=operator.itemgetter(1))
                 scoredChair = fileList.pop(index)
                 scores = np.delete(scores, index)
-                mesh = pymesh.load_mesh(newChairDir + "/" + scoredChair)
-                pymesh.save_mesh(rankedChairDir + "/" + str(i + 1) + ".obj", mesh)
+                mesh = pymesh.load_mesh(newChairDir + scoredChair)
+                pymesh.save_mesh(rankedChairDir + str(i + 1) + ".obj", mesh)
+            sys.exit()
+        elif templateDirName == "load":
+            templates, parts = loadTemplatesWithoutPickle()
+            with open('templates', 'wb') as f:
+                pickle.dump([templates, parts], f)
             sys.exit()
 
     print("Beginning Generation Script")
@@ -448,17 +471,18 @@ if __name__ == '__main__':
             newMesh = generateForTemplate(template, parts)
             print("New Chair Generated")
 
-            file = newChairDir + "/" + str(index + 1).zfill(4) + "_" + template.dir + ".obj"
+            file = newChairDir + str(index + 1).zfill(4) + ".obj"
             pymesh.save_mesh(file, newMesh);
             createViews.createViews(file, chairCount)
             chairCount += 3
 
-        scores = evaluate_sample.main("new_chair_bmp/")
+        scores = evaluate_sample.main(newBMPDir)
         fileList = listdir(newChairDir)
         fileList.sort()
-        for i in range(0, len(templates)):
+        fileListBmp = listdir(newBMPDir)
+        for i in range(0, int(len(fileListBmp) / 3)):
             index, value = max(enumerate(scores), key=operator.itemgetter(1))
             scoredChair = fileList.pop(index)
             scores = np.delete(scores, index)
-            mesh = pymesh.load_mesh(newChairDir + "/" + scoredChair)
-            pymesh.save_mesh(rankedChairDir + "/" + str(i + 1) + ".obj", mesh)
+            mesh = pymesh.load_mesh(newChairDir + scoredChair)
+            pymesh.save_mesh(rankedChairDir + str(i + 1) + ".obj", mesh)
