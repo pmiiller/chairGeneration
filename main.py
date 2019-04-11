@@ -16,6 +16,8 @@ import pickle
 Template = namedtuple("Template", "dir templateParts")
 TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox orientedExtents")
 
+chairsDirectory = "clean_mesh"
+
 def computeOBB(pymesh):
     trimesh = trimesh_obb.convertPymeshToTrimesh(pymesh);
     boundingBox = trimesh_obb.convertMeshToObb(trimesh)
@@ -146,10 +148,10 @@ def loadTemplates():
     parts = []
 
     # Read all parts for all chairs and create the templates
-    chairDirs = [f for f in listdir("last_examples") if isdir(join("last_examples", f))]
+    chairDirs = [f for f in listdir(chairsDirectory) if isdir(join(chairsDirectory, f))]
     for chairDir in chairDirs:
         newTemplate = Template(chairDir, [])
-        chairMeshes = "last_examples/" + chairDir + "/meshes"
+        chairMeshes = chairsDirectory + "/" + chairDir + "/meshes"
         chairParts = [f for f in listdir(chairMeshes) if isfile(join(chairMeshes, f))]
         for chairPart in chairParts:
             mesh = pymesh.load_mesh(chairMeshes + "/" + chairPart)
@@ -186,7 +188,7 @@ def generateForTemplate(selectedTemplate, parts):
     clustering = []
     doneCreation = False
     sampleChairBmp = "sample_chair/"
-    max_iter = 10
+    max_iter = 5
     iterCreate = 0
     possibleMesh = []
     scores = []
@@ -202,6 +204,7 @@ def generateForTemplate(selectedTemplate, parts):
       
     while (not doneCreation) and (iterCreate < max_iter):  
         newMesh = None
+        lastScore = 0.0
         for templatePart in selectedTemplate.templateParts:
             # Select the part that has the obb that best fits the obb of the template part
             
@@ -230,8 +233,8 @@ def generateForTemplate(selectedTemplate, parts):
                         if deformationCost < minDeformationCost:
                             minDeformationCost = deformationCost
                             selectedPart = part
-                            
-            selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
+            print(chairsDirectory + "/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
+            selectedMesh = pymesh.load_mesh(chairsDirectory + "/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
             # FOR DEBUGING: add the part to the obb mesh
             obbMesh = addToObbMesh(obbMesh, templatePart)
@@ -241,7 +244,7 @@ def generateForTemplate(selectedTemplate, parts):
 
             # add the selectedMesh to the newMesh
             newMesh = addToNewMesh(newMesh, selectedMesh)
-
+            
         # creates views and scores
         possibleMesh.append(newMesh)
         pymesh.save_mesh("sample_mesh.obj", newMesh);
@@ -336,7 +339,7 @@ if __name__ == '__main__':
                 if templates[index].dir == templateDirName:
                     selectedTemplate = templates[index]
                 index += 1
-            if index == len(templates):
+            if selectedTemplate is None:
                 print("Error: " + templateDirName + " is not valid.")
                 sys.exit(0)
         print("Template Selected: " + selectedTemplate.dir)
