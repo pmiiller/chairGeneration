@@ -5,6 +5,7 @@
  - `python main.py <chairDirectoryName>` to generate a single chair with a specified template
  - `python main.py all` to generate a chair for all templates and then score them
  - `python main.py eval` to evaluate a sample of already generated chairs
+ - `python main.py load` to load all templates again and create a new pickle file
 
 
 Download the LeChairs scorer from [here](https://drive.google.com/file/d/19p7GjhSbcBYy6VUbuMHugcqD1tkQfl6-/view).
