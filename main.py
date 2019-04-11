@@ -14,7 +14,7 @@ import operator
 import pickle
 
 Template = namedtuple("Template", "dir templateParts")
-TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox orientedExtents")
+TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox orientedExtents symmetries")
 
 def computeOBB(pymesh):
     trimesh = trimesh_obb.convertPymeshToTrimesh(pymesh);
@@ -141,6 +141,43 @@ def connectPartToMesh(mesh, part):
 
     return pymesh.form_mesh(newVertices, selectedMesh.faces)
 
+def checkForSymmetry(part1, part2):
+    part1Copy = part1.boundingBox.copy()
+    part2Copy = part2.boundingBox.copy()
+
+    center1 = np.array([
+        [1,0,0,-part1Copy.centroid[0]],
+        [0,1,0,0],
+        [0,0,1,0],
+        [0,0,0,1]])
+        
+    center2 = np.array([
+        [1,0,0,-part2Copy.centroid[0]],
+        [0,1,0,0],
+        [0,0,1,0],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(center1)
+    part2Copy.apply_transform(center2)
+
+    reflectX = np.array([
+        [-1,0,0,0],
+        [0,1,0,0],
+        [0,0,1,0],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(reflectX)
+
+    closestPointsX = tri.proximity.ProximityQuery(part1Copy).vertex(part2Copy.vertices)
+    diffrenceX = np.sum(closestPointsX[0])
+    # print(diffrenceX)
+
+    symmetryThreshold = 0.05
+    symmetry = False
+    if diffrenceX < symmetryThreshold:
+        symmetry = True
+    return symmetry
+
 def loadTemplates():
     templates = []
     parts = []
@@ -148,6 +185,7 @@ def loadTemplates():
     # Read all parts for all chairs and create the templates
     chairDirs = [f for f in listdir("last_examples") if isdir(join("last_examples", f))]
     for chairDir in chairDirs:
+        print("Loading tempate from: " + chairDir)
         newTemplate = Template(chairDir, [])
         chairMeshes = "last_examples/" + chairDir + "/meshes"
         chairParts = [f for f in listdir(chairMeshes) if isfile(join(chairMeshes, f))]
@@ -155,9 +193,19 @@ def loadTemplates():
             mesh = pymesh.load_mesh(chairMeshes + "/" + chairPart)
             boundingBox = computeOBB(mesh)
             orientedExtents = tri.bounds.oriented_bounds(boundingBox)[1]
-            newTemplatePart = TemplatePart(chairDir, chairPart, boundingBox, orientedExtents)
+            newTemplatePart = TemplatePart(chairDir, chairPart, boundingBox, orientedExtents, [])
             newTemplate.templateParts.append(newTemplatePart)
             parts.append(newTemplatePart)
+
+        # Find symmetries
+        for templatePart1 in newTemplate.templateParts:
+            for templatePart2 in newTemplate.templateParts:
+                if templatePart1 != templatePart2:
+                    symmetry = checkForSymmetry(templatePart1, templatePart2)
+                    if symmetry:
+                        print("\tSymmetry Detected: " + templatePart1.obj + " ; " + templatePart2.obj)
+                        templatePart1.symmetries.append(templatePart2)
+
         templates.append(newTemplate)
 
     return [templates, parts]
@@ -192,7 +240,7 @@ def generateForTemplate(selectedTemplate, parts):
         useCluster = True
     except:
         useCluster = False
-        
+
     for templatePart in selectedTemplate.templateParts:
         # Select the part that has the obb that best fits the obb of the template part
 
@@ -208,7 +256,7 @@ def generateForTemplate(selectedTemplate, parts):
                     #print('len = ',len(cluster), ' rand = ',randomMember)
                     selectedPart = cluster[randomMember]
                 #print("cost: ",deformationCost, "mincost: ",minDeformationCost)
-                
+
 
         else:
             # use a closest fitting part if there is no file for clusters
@@ -221,7 +269,7 @@ def generateForTemplate(selectedTemplate, parts):
                         minDeformationCost = deformationCost
                         selectedPart = part
 
-                        
+
         selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
         # FOR DEBUGING: add the part to the obb mesh
@@ -232,6 +280,49 @@ def generateForTemplate(selectedTemplate, parts):
 
         # add the selectedMesh to the newMesh
         newMesh = addToNewMesh(newMesh, selectedMesh)
+
+        # check for symmetries and use that to fill in parts of the template
+        for symmetry in templatePart.symmetries:
+            if symmetry in selectedTemplate.templateParts:
+                canCent = templatePart.boundingBox.centroid
+                tarCent = symmetry.boundingBox.centroid
+
+                transform = np.array([[1,0,0,0],
+                    [0,1,0,0],
+                    [0,0,1,0],
+                    [0,0,0,1]])
+
+                canToOrg = np.array([[1,0,0,-canCent[0]],
+                    [0,1,0,-canCent[1]],
+                    [0,0,1,-canCent[2]],
+                    [0,0,0,1]])
+
+                reflectX = np.array([[-1,0,0,0],
+                    [0,1,0,0],
+                    [0,0,1,0],
+                    [0,0,0,1]])
+
+                orgToTar = np.array([[1,0,0,tarCent[0]],
+                    [0,1,0,tarCent[1]],
+                    [0,0,1,tarCent[2]],
+                    [0,0,0,1]])
+
+                transform = np.matmul(transform, orgToTar)
+                transform = np.matmul(transform, reflectX)
+                transform = np.matmul(transform, canToOrg)
+
+                newVertices = np.ndarray(selectedMesh.vertices.shape, selectedMesh.vertices.dtype)
+                for index, vertex in enumerate(selectedMesh.vertices):
+
+                    homVertex = np.array([vertex[0], vertex[1], vertex[2], 1])
+                    transformedVertex = np.matmul(transform, homVertex)
+                    newVertices[index] = np.array([transformedVertex[0], transformedVertex[1], transformedVertex[2]]) / transformedVertex[3]
+
+                newFaces = selectedMesh.faces[:,::-1]
+                symmetricMesh = pymesh.form_mesh(newVertices, newFaces)
+                newMesh = addToNewMesh(newMesh, symmetricMesh)
+
+                selectedTemplate.templateParts.remove(symmetry)
 
     pymesh.save_mesh("obbChair.obj", obbMesh);
     return newMesh
@@ -343,4 +434,3 @@ if __name__ == '__main__':
             scores = np.delete(scores, index)
             mesh = pymesh.load_mesh(newChairDir + "/" + scoredChair)
             pymesh.save_mesh(rankedChairDir + "/" + str(i + 1) + ".obj", mesh)
-
