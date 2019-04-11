@@ -1,7 +1,7 @@
 import pymesh
 from collections import namedtuple
-from os import listdir
-from os.path import isfile, isdir, join
+from os import listdir, makedirs
+from os.path import isfile, isdir, join, exists
 import sys
 import random
 import math
@@ -188,6 +188,8 @@ def generateForTemplate(selectedTemplate, parts):
     clustering = []
     doneCreation = False
     sampleChairBmp = "sample_chair/"
+    if not exists(sampleChairBmp):
+        makedirs(sampleChairBmp)
     max_iter = 5
     iterCreate = 0
     possibleMesh = []
@@ -233,7 +235,6 @@ def generateForTemplate(selectedTemplate, parts):
                         if deformationCost < minDeformationCost:
                             minDeformationCost = deformationCost
                             selectedPart = part
-            print(chairsDirectory + "/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
             selectedMesh = pymesh.load_mesh(chairsDirectory + "/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
             # FOR DEBUGING: add the part to the obb mesh
@@ -258,8 +259,6 @@ def generateForTemplate(selectedTemplate, parts):
         if iterCreate >= max_iter:
             index = scores.index(max(scores))
             newMesh = possibleMesh[index]
-            print(scores)
-            print(index)
 
 
     pymesh.save_mesh("obbChair.obj", obbMesh);
