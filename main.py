@@ -295,48 +295,48 @@ def generateForTemplate(selectedTemplate, parts):
             newMesh = addToNewMesh(newMesh, selectedMesh)
 
 
-        # check for symmetries and use that to fill in parts of the template
-        for symmetry in templatePart.symmetries:
-            if symmetry in selectedTemplate.templateParts:
-                canCent = templatePart.boundingBox.centroid
-                tarCent = symmetry.boundingBox.centroid
+            # check for symmetries and use that to fill in parts of the template
+            for symmetry in templatePart.symmetries:
+                if symmetry in selectedTemplate.templateParts:
+                    canCent = templatePart.boundingBox.centroid
+                    tarCent = symmetry.boundingBox.centroid
 
-                transform = np.array([[1,0,0,0],
-                    [0,1,0,0],
-                    [0,0,1,0],
-                    [0,0,0,1]])
+                    transform = np.array([[1,0,0,0],
+                        [0,1,0,0],
+                        [0,0,1,0],
+                        [0,0,0,1]])
 
-                canToOrg = np.array([[1,0,0,-canCent[0]],
-                    [0,1,0,-canCent[1]],
-                    [0,0,1,-canCent[2]],
-                    [0,0,0,1]])
+                    canToOrg = np.array([[1,0,0,-canCent[0]],
+                        [0,1,0,-canCent[1]],
+                        [0,0,1,-canCent[2]],
+                        [0,0,0,1]])
 
-                reflectX = np.array([[-1,0,0,0],
-                    [0,1,0,0],
-                    [0,0,1,0],
-                    [0,0,0,1]])
+                    reflectX = np.array([[-1,0,0,0],
+                        [0,1,0,0],
+                        [0,0,1,0],
+                        [0,0,0,1]])
 
-                orgToTar = np.array([[1,0,0,tarCent[0]],
-                    [0,1,0,tarCent[1]],
-                    [0,0,1,tarCent[2]],
-                    [0,0,0,1]])
+                    orgToTar = np.array([[1,0,0,tarCent[0]],
+                        [0,1,0,tarCent[1]],
+                        [0,0,1,tarCent[2]],
+                        [0,0,0,1]])
 
-                transform = np.matmul(transform, orgToTar)
-                transform = np.matmul(transform, reflectX)
-                transform = np.matmul(transform, canToOrg)
+                    transform = np.matmul(transform, orgToTar)
+                    transform = np.matmul(transform, reflectX)
+                    transform = np.matmul(transform, canToOrg)
 
-                newVertices = np.ndarray(selectedMesh.vertices.shape, selectedMesh.vertices.dtype)
-                for index, vertex in enumerate(selectedMesh.vertices):
+                    newVertices = np.ndarray(selectedMesh.vertices.shape, selectedMesh.vertices.dtype)
+                    for index, vertex in enumerate(selectedMesh.vertices):
 
-                    homVertex = np.array([vertex[0], vertex[1], vertex[2], 1])
-                    transformedVertex = np.matmul(transform, homVertex)
-                    newVertices[index] = np.array([transformedVertex[0], transformedVertex[1], transformedVertex[2]]) / transformedVertex[3]
+                        homVertex = np.array([vertex[0], vertex[1], vertex[2], 1])
+                        transformedVertex = np.matmul(transform, homVertex)
+                        newVertices[index] = np.array([transformedVertex[0], transformedVertex[1], transformedVertex[2]]) / transformedVertex[3]
 
-                newFaces = selectedMesh.faces[:,::-1]
-                symmetricMesh = pymesh.form_mesh(newVertices, newFaces)
-                newMesh = addToNewMesh(newMesh, symmetricMesh)
+                    newFaces = selectedMesh.faces[:,::-1]
+                    symmetricMesh = pymesh.form_mesh(newVertices, newFaces)
+                    newMesh = addToNewMesh(newMesh, symmetricMesh)
 
-                selectedTemplate.templateParts.remove(symmetry)
+                    selectedTemplate.templateParts.remove(symmetry)
 
         # creates views and scores
         possibleMesh.append(newMesh)
