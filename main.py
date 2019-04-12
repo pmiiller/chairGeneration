@@ -292,7 +292,7 @@ def loadTemplates():
             print('Sucessfully found templates file')
             return [templates, parts]
     except:
-        templates, parts = loadTemplatesWithoutPickleFile()
+        templates, parts = loadTemplatesWithoutPickle()
         with open('templates', 'wb') as f:
             pickle.dump([templates, parts], f)
         return [templates, parts]
