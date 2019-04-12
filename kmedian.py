@@ -11,10 +11,12 @@ from main import calculateDeformationCost # import cost function from main
 
 from main import loadTemplates
 
+
+
 # num of max randomly chosen pairs of non mediod and mediod
 # max number of meaningless tries
-maxNeighbour = 10 
-numlocal = 5 # number of initial points to attempt to select
+maxNeighbour = 15 
+numlocal = 10 # number of initial points to attempt to select
 k = 12 
 
 
@@ -148,25 +150,25 @@ def kmedian(k, data):
 
 # ========================DONE DEFINING FCN
 
-templates = []
-parts = []
+#templates = []
+#parts = []
 
   
-loadedTemplates = loadTemplates()
-templates = loadedTemplates[0]
-parts = loadedTemplates[1]
+#loadedTemplates = loadTemplates()
+#templates = loadedTemplates[0]
+#parts = loadedTemplates[1]
 
-print('the length of parts is: ',len(parts))
-
-
-clusterings = kmedian(k,parts)
+#print('the length of parts is: ',len(parts))
 
 
+#clusterings = kmedian(k,parts)
 
-with open("clusterings", 'wb') as f:
-    pickle.dump(clusterings, f)
 
-with open("clusterings", 'rb') as f:
-    aaa = pickle.load(f)
+
+#with open("clusterings", 'wb') as f:
+#    pickle.dump(clusterings, f)
+
+#with open("clusterings", 'rb') as f:
+#    aaa = pickle.load(f)
 
 

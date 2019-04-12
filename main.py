@@ -2,6 +2,7 @@ import pymesh
 from collections import namedtuple
 from os import listdir, makedirs
 from os.path import isfile, isdir, join, exists
+import kmedian as km
 import sys
 import random
 import math
@@ -431,6 +432,13 @@ if __name__ == '__main__':
             with open('templates', 'wb') as f:
                 pickle.dump([templates, parts], f)
             sys.exit()
+        elif templateDirName == "cluster":
+            loadedTemplates = loadTemplates()
+            parts = loadedTemplates[1]
+            clusterings = km.kmedian(12,parts)
+            with open("clusterings", 'wb') as f:
+                pickle.dump(clusterings, f)
+            sys.exit()
 
     print("Beginning Generation Script")
 
@@ -486,3 +494,4 @@ if __name__ == '__main__':
             scores = np.delete(scores, index)
             mesh = pymesh.load_mesh(newChairDir + scoredChair)
             pymesh.save_mesh(rankedChairDir + str(i + 1) + ".obj", mesh)
+
