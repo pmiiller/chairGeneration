@@ -24,10 +24,14 @@ def saveMesh(row, chair):
 	pymesh.save_mesh(join(directory, row['file'].replace(" ", "")), pMesh)
 
 
+
 def createCleanMeshParts(chair):
 	chairPath = join(meshDir, chair)
 	meshes = pd.DataFrame()
-	meshes['file'] = listdir(join(chairPath, "meshes"))
+	
+	partsDir = [folder for folder in listdir(chairPath) if isdir(join(chairPath, folder))][0]
+
+	meshes['file'] = [f for f in listdir(join(chairPath, partsDir)) if f.endswith('.obj')]
 	chairMesh = None
 	chairFile = None
 	for f in listdir(chairPath):
@@ -35,7 +39,7 @@ def createCleanMeshParts(chair):
 			chairFile = f
 			chairMesh = tri.load_mesh(join(chairPath, f))
 
-	meshes['mesh'] = meshes['file'].apply(lambda f: tri.load_mesh(join(chairPath, "meshes", f)))
+	meshes['mesh'] = meshes['file'].apply(lambda f: tri.load_mesh(join(chairPath, partsDir, f)))
 	mask = meshes['mesh'].apply(insideMesh, chair=chairMesh)
 	clean_mesh = meshes.where(mask).dropna()
 	clean_mesh.apply(saveMesh, chair=chair, axis=1)
