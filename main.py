@@ -144,6 +144,7 @@ def connectPartToMesh(mesh, part):
     return pymesh.form_mesh(newVertices, selectedMesh.faces)
 
 def checkForSymmetry(part1, part2):
+    # X axis symmetry
     part1Copy = part1.boundingBox.copy()
     part2Copy = part2.boundingBox.copy()
 
@@ -171,13 +172,77 @@ def checkForSymmetry(part1, part2):
     part2Copy.apply_transform(center2)
 
     closestPointsX = tri.proximity.ProximityQuery(part1Copy).vertex(part2Copy.vertices)
-    diffrenceX = np.sum(closestPointsX[0])
-    # print(diffrenceX)
+    differenceX = np.sum(closestPointsX[0])
 
-    symmetryThreshold = 0.08
-    symmetry = False
-    if diffrenceX < symmetryThreshold:
-        symmetry = True
+    # Y axis symmetry
+    part1Copy = part1.boundingBox.copy()
+    part2Copy = part2.boundingBox.copy()
+
+    reflectY = np.array([
+        [1,0,0,0],
+        [0,-1,0,0],
+        [0,0,1,0],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(reflectY)
+
+    center1 = np.array([
+        [1,0,0,0],
+        [0,1,0,-part1Copy.centroid[1]],
+        [0,0,1,0],
+        [0,0,0,1]])
+
+    center2 = np.array([
+        [1,0,0,0],
+        [0,1,0,-part2Copy.centroid[1]],
+        [0,0,1,0],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(center1)
+    part2Copy.apply_transform(center2)
+
+    closestPointsY = tri.proximity.ProximityQuery(part1Copy).vertex(part2Copy.vertices)
+    differenceY = np.sum(closestPointsY[0])
+
+    # Z axis symmetry
+    part1Copy = part1.boundingBox.copy()
+    part2Copy = part2.boundingBox.copy()
+
+    reflectZ = np.array([
+        [1,0,0,0],
+        [0,1,0,0],
+        [0,0,-1,0],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(reflectZ)
+
+    center1 = np.array([
+        [1,0,0,0],
+        [0,1,0,0],
+        [0,0,1,-part1Copy.centroid[2]],
+        [0,0,0,1]])
+
+    center2 = np.array([
+        [1,0,0,0],
+        [0,1,0,0],
+        [0,0,1,-part2Copy.centroid[2]],
+        [0,0,0,1]])
+
+    part1Copy.apply_transform(center1)
+    part2Copy.apply_transform(center2)
+
+    closestPointsZ = tri.proximity.ProximityQuery(part1Copy).vertex(part2Copy.vertices)
+    differenceZ = np.sum(closestPointsZ[0])
+
+    # Return symmetries
+    symmetryThreshold = 0.1
+    symmetry = [False, False, False]
+    if differenceX < symmetryThreshold:
+        symmetry[0] = True
+    if differenceY < symmetryThreshold:
+        symmetry[1] = True
+    if differenceZ < symmetryThreshold:
+        symmetry[2] = True
     return symmetry
 
 def loadTemplatesWithoutPickle():
@@ -204,9 +269,14 @@ def loadTemplatesWithoutPickle():
             for templatePart2 in newTemplate.templateParts:
                 if templatePart1 != templatePart2:
                     symmetry = checkForSymmetry(templatePart1, templatePart2)
-                    if symmetry:
-                        print("\tSymmetry Detected: " + templatePart1.obj + " ; " + templatePart2.obj)
-                        templatePart1.symmetries.append(templatePart2)
+                    if symmetry[0]:
+                        print("\tX Symmetry Detected: " + templatePart1.obj + " ; " + templatePart2.obj)
+                    if symmetry[1]:
+                        print("\tY Symmetry Detected: " + templatePart1.obj + " ; " + templatePart2.obj)
+                    if symmetry[2]:
+                        print("\tZ Symmetry Detected: " + templatePart1.obj + " ; " + templatePart2.obj)
+                    if any(axis == True for axis in symmetry):
+                        templatePart1.symmetries.append([templatePart2, symmetry])
 
         templates.append(newTemplate)
 
@@ -313,9 +383,11 @@ def generateForTemplate(selectedTemplate, parts):
 
             # check for symmetries and use that to fill in parts of the template
             for symmetry in templatePart.symmetries:
-                if symmetry in templateParts:
+                symmetryPart = symmetry[0]
+                symmetryAxes = symmetry[1]
+                if symmetryPart in templateParts:
                     canCent = templatePart.boundingBox.centroid
-                    tarCent = symmetry.boundingBox.centroid
+                    tarCent = symmetryPart.boundingBox.centroid
 
                     transform = np.array([[1,0,0,0],
                         [0,1,0,0],
@@ -327,9 +399,20 @@ def generateForTemplate(selectedTemplate, parts):
                         [0,0,1,-canCent[2]],
                         [0,0,0,1]])
 
-                    reflectX = np.array([[-1,0,0,0],
+                    reflectX = np.array([
+                        [-1,0,0,0],
                         [0,1,0,0],
                         [0,0,1,0],
+                        [0,0,0,1]])
+                    reflectY = np.array([
+                        [1,0,0,0],
+                        [0,-1,0,0],
+                        [0,0,1,0],
+                        [0,0,0,1]])
+                    reflectZ = np.array([
+                        [1,0,0,0],
+                        [0,1,0,0],
+                        [0,0,-1,0],
                         [0,0,0,1]])
 
                     orgToTar = np.array([[1,0,0,tarCent[0]],
@@ -338,7 +421,12 @@ def generateForTemplate(selectedTemplate, parts):
                         [0,0,0,1]])
 
                     transform = np.matmul(transform, orgToTar)
-                    transform = np.matmul(transform, reflectX)
+                    if symmetryAxes[0]:
+                        transform = np.matmul(transform, reflectX)
+                    elif symmetryAxes[1]:
+                        transform = np.matmul(transform, reflectY)
+                    elif symmetryAxes[2]:
+                        transform = np.matmul(transform, reflectZ)
                     transform = np.matmul(transform, canToOrg)
 
                     newVertices = np.ndarray(selectedMesh.vertices.shape, selectedMesh.vertices.dtype)
@@ -352,7 +440,7 @@ def generateForTemplate(selectedTemplate, parts):
                     symmetricMesh = pymesh.form_mesh(newVertices, newFaces)
                     newMesh = addToNewMesh(newMesh, symmetricMesh)
 
-                    templateParts.remove(symmetry)
+                    templateParts.remove(symmetryPart)
 
         # creates views and scores
         possibleMesh.append(newMesh)
