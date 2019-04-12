@@ -5,3 +5,5 @@ venv
 *.obj
 *.pyc
 *.bmp
+!last_examples/*/*.obj
+!last_examples/*/*/*.obj
