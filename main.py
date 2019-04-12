@@ -505,6 +505,7 @@ if __name__ == '__main__':
             doAll = True
         elif templateDirName == "eval":
             scores = evaluate_sample.main(newBMPDir)
+            print(sum(scores) / len(scores))
             fileList = listdir(newChairDir)
             fileList.sort()
             fileListBmp = listdir(newBMPDir)
@@ -573,6 +574,7 @@ if __name__ == '__main__':
             chairCount += 3
 
         scores = evaluate_sample.main(newBMPDir)
+        print(sum(scores) / len(scores))
         fileList = listdir(newChairDir)
         fileList.sort()
         fileListBmp = listdir(newBMPDir)
@@ -582,4 +584,3 @@ if __name__ == '__main__':
             scores = np.delete(scores, index)
             mesh = pymesh.load_mesh(newChairDir + scoredChair)
             pymesh.save_mesh(rankedChairDir + str(i + 1) + ".obj", mesh)
-
