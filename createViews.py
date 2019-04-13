@@ -1,6 +1,6 @@
-import pymesh
 import numpy as np
 import os, os.path
+import trimesh as tri
 from PIL import Image, ImageDraw
 
 
@@ -25,15 +25,13 @@ def getDistOfTriangle(O, triangle, v0, v1, v2, axis):
 
 
 def getMesh(filename):
-	return pymesh.load_mesh(filename)
+	return tri.load_mesh(filename)
 
 
 
 
 def createViews(filename, chairCount, directory='new_chair_bmp/'):
 	mesh = getMesh(filename)
-	# mesh = getMesh("last_examples/ChairFancy2/fancyChair2.obj")
-	# mesh = pymesh.load_mesh("newChair.obj")
 
 
 	minX = mesh.vertices[0][0]
@@ -93,9 +91,12 @@ def createViews(filename, chairCount, directory='new_chair_bmp/'):
 	dt = np.dtype([('p0X', int), ('p0Y', int),
 				   ('p1X', int), ('p1Y', int),
 				   ('p2X', int), ('p2Y', int), ('color', int)])
-	triFront = np.empty((mesh.num_faces), dtype = dt)
-	triTop = np.empty((mesh.num_faces), dtype = dt)
-	triSide = np.empty((mesh.num_faces), dtype = dt)
+	# triFront = np.empty((mesh.num_faces), dtype = dt)
+	# triTop = np.empty((mesh.num_faces), dtype = dt)
+	# triSide = np.empty((mesh.num_faces), dtype = dt)
+	triFront = np.empty((len(mesh.faces)), dtype = dt)
+	triTop = np.empty((len(mesh.faces)), dtype = dt)
+	triSide = np.empty((len(mesh.faces)), dtype = dt)
 
 	for triangle in mesh.faces:
 		v0 = mesh.vertices[triangle[0]]
@@ -137,7 +138,8 @@ def createViews(filename, chairCount, directory='new_chair_bmp/'):
 
 
 	#iterate through triangles starting with lightest shade
-	for i in range(mesh.num_faces-1, -1, -1):
+	# for i in range(mesh.num_faces-1, -1, -1):
+	for i in range(len(mesh.faces)-1, -1, -1):
 		drawTop.polygon([(triTop[i][0], triTop[i][1]),
 						 (triTop[i][2], triTop[i][3]),
 						 (triTop[i][4], triTop[i][5])],

@@ -1,4 +1,3 @@
-import pymesh
 from collections import namedtuple
 from os import listdir, makedirs
 from os.path import isfile, isdir, join, exists
@@ -19,8 +18,7 @@ TemplatePart = namedtuple("TemplatePart", "dir obj boundingBox orientedExtents s
 
 chairsDirectory = "clean_mesh"
 
-def computeOBB(pymesh):
-    trimesh = trimesh_obb.convertPymeshToTrimesh(pymesh);
+def computeOBB(trimesh):
     boundingBox = trimesh_obb.convertMeshToObb(trimesh)
     return boundingBox
 
@@ -101,48 +99,14 @@ def matchOBB(target, candidate, mesh):
     transform = np.matmul(transform, canRotInv)
     transform = np.matmul(transform, canToOrg)
 
-    newVertices = np.ndarray(mesh.vertices.shape, mesh.vertices.dtype)
-    for index, vertex in enumerate(mesh.vertices):
+    newMesh = mesh.copy()
+    newMesh.apply_transform(transform)
 
-        homVertex = np.array([vertex[0], vertex[1], vertex[2], 1])
-        transformedVertex = np.matmul(transform, homVertex)
-        newVertices[index] = np.array([transformedVertex[0], transformedVertex[1], transformedVertex[2]]) / transformedVertex[3]
-
-    return pymesh.form_mesh(newVertices, mesh.faces)
+    return newMesh
 
 def calculateDeformationCostProcrustes(target, candidate):
     t, _, c = trimesh_obb.procrustesMatrixCost(candidate.boundingBox, target.boundingBox)
     return t, c
-
-def matchOBBProcrustes(mesh, transform):
-    t_candidate = trimesh_obb.convertPymeshToTrimesh(mesh).copy()
-    t_candidate.apply_transform(transform)
-
-    return pymesh.form_mesh(t_candidate.vertices, t_candidate.faces)
-
-def connectPartToMesh(mesh, part):
-    # ensures basic connectivity
-    # there is probably a better way to connect
-    pointDistances = pymesh.distance_to_mesh(mesh, part.vertices)
-    minSquaredDistance = sys.float_info.max
-    closestPointMesh = None
-    closestPointPart = None
-
-    # enumerate the minimum squared distances
-    for index, pointDistance in enumerate(pointDistances[0]):
-        # find the minimum squared distance and the corresponding point pair
-        if pointDistance < minSquaredDistance:
-            minSquaredDistance = pointDistance
-            closestPointMesh = pointDistances[2][index]
-            closestPointPart = part.vertices[index]
-
-    connectionTranslation = closestPointMesh - closestPointPart
-
-    newVertices = np.ndarray(part.vertices.shape, part.vertices.dtype)
-    for index, vertex in enumerate(part.vertices):
-        newVertices[index] = vertex + connectionTranslation
-
-    return pymesh.form_mesh(newVertices, selectedMesh.faces)
 
 def checkForSymmetry(part1, part2):
     # X axis symmetry
@@ -258,7 +222,7 @@ def loadTemplatesWithoutPickle():
         chairMeshes = chairsDirectory + "/" + chairDir + "/meshes"
         chairParts = [f for f in listdir(chairMeshes) if isfile(join(chairMeshes, f))]
         for chairPart in chairParts:
-            mesh = pymesh.load_mesh(chairMeshes + "/" + chairPart)
+            mesh = tri.load_mesh(chairMeshes + "/" + chairPart)
             boundingBox = computeOBB(mesh)
             orientedExtents = tri.bounds.oriented_bounds(boundingBox)[1]
             newTemplatePart = TemplatePart(chairDir, chairPart, boundingBox, orientedExtents, [])
@@ -302,8 +266,7 @@ def addToNewMesh(newMesh, selectedMesh):
     if newMesh == None:
         newMesh = selectedMesh
     else :
-        # selectedMesh = connectPartToMesh(newMesh, selectedMesh)
-        newMesh = pymesh.merge_meshes([newMesh, selectedMesh])
+        newMesh = tri.util.concatenate([newMesh, selectedMesh])
     return newMesh
 
 def addToObbMesh(obbMesh, templatePart):
@@ -312,7 +275,7 @@ def addToObbMesh(obbMesh, templatePart):
     if obbMesh == None:
         obbMesh = selectedObb
     else :
-        obbMesh = pymesh.merge_meshes([obbMesh, selectedObb])
+        obbMesh = tri.util.concatenate(obbMesh, selectedObb)
     return obbMesh
 
 def generateForTemplate(selectedTemplate, parts):
@@ -370,7 +333,7 @@ def generateForTemplate(selectedTemplate, parts):
                         if deformationCost < minDeformationCost:
                             minDeformationCost = deformationCost
                             selectedPart = part
-            selectedMesh = pymesh.load_mesh(chairsDirectory + "/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
+            selectedMesh = tri.load_mesh(chairsDirectory + "/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
 
             # FOR DEBUGING: add the part to the obb mesh
             obbMesh = addToObbMesh(obbMesh, templatePart)
@@ -430,26 +393,19 @@ def generateForTemplate(selectedTemplate, parts):
                         transform = np.matmul(transform, reflectZ)
                     transform = np.matmul(transform, canToOrg)
 
-                    newVertices = np.ndarray(selectedMesh.vertices.shape, selectedMesh.vertices.dtype)
-                    for index, vertex in enumerate(selectedMesh.vertices):
-
-                        homVertex = np.array([vertex[0], vertex[1], vertex[2], 1])
-                        transformedVertex = np.matmul(transform, homVertex)
-                        newVertices[index] = np.array([transformedVertex[0], transformedVertex[1], transformedVertex[2]]) / transformedVertex[3]
-
-                    newFaces = selectedMesh.faces[:,::-1]
-                    symmetricMesh = pymesh.form_mesh(newVertices, newFaces)
+                    symmetricMesh = selectedMesh.copy()
+                    symmetricMesh.apply_transform(transform)
+                    symmetricMesh.fix_normals() # reflecting the parts can break the normals
                     newMesh = addToNewMesh(newMesh, symmetricMesh)
 
                     templateParts.remove(symmetryPart)
 
         # creates views and scores
         possibleMesh.append(newMesh)
-        pymesh.save_mesh("sample_mesh.obj", newMesh);
+        newMesh.export("sample_mesh.obj")
         createViews.createViews("sample_mesh.obj", 1, sampleChairBmp)
         score = evaluate_sample.main(sampleChairBmp)
         scores.append(score[0])
-        # print(scores)
         iterCreate += 1
 
         doneCreation = score[0] >= 0.8
@@ -457,36 +413,7 @@ def generateForTemplate(selectedTemplate, parts):
             index = scores.index(max(scores))
             newMesh = possibleMesh[index]
 
-    pymesh.save_mesh("obbChair.obj", obbMesh);
-    return newMesh
-
-def generateForTemplateProcrustes(selectedTemplate, parts):
-    # For each part in the selected template, pick the part with the lowest deformation cost
-    newMesh = None
-    obbMesh = None
-    for templatePart in selectedTemplate.templateParts:
-        # Select the part that has the obb that best fits the obb of the template part
-        selectedPart = None
-        minDeformationCost = sys.float_info.max
-        for part in parts:
-            if part.dir != templatePart.dir:
-                t, deformationCost = calculateDeformationCostProcrustes(templatePart, part)
-                if deformationCost < minDeformationCost:
-                    minDeformationCost = deformationCost
-                    selectedPart = part
-                    minTransform = t
-        selectedMesh = pymesh.load_mesh("last_examples/" + selectedPart.dir + "/meshes/" + selectedPart.obj)
-
-        # FOR DEBUGING: add the part to the obb mesh
-        obbMesh = addToObbMesh(obbMesh, templatePart)
-
-        # transform the selectedMesh using procrustes transform
-        selectedMesh = matchOBBProcrustes(selectedMesh, minTransform)
-
-        # add the selectedMesh to the newMesh
-        newMesh = addToNewMesh(newMesh, selectedMesh)
-
-    pymesh.save_mesh("obbChair.obj", obbMesh);
+    obbMesh.export("obbChair.obj")
     return newMesh
 
 if __name__ == '__main__':
@@ -511,8 +438,8 @@ if __name__ == '__main__':
                 chairCount += 3
 
             scores = evaluate_sample.main(newBMPDir)
-            print("Median: " + str(np.median(np.array(scores))))
-            print("Average: " + str(np.average(np.array(scores))))
+            print("Median score: " + str(np.median(np.array(scores))))
+            print("Average score: " + str(np.average(np.array(scores))))
             fileList = listdir(newChairDir)
             fileList.sort()
             fileListBmp = listdir(newBMPDir)
@@ -520,8 +447,8 @@ if __name__ == '__main__':
                 index, value = max(enumerate(scores), key=operator.itemgetter(1))
                 scoredChair = fileList.pop(index)
                 scores = np.delete(scores, index)
-                mesh = pymesh.load_mesh(newChairDir + scoredChair)
-                pymesh.save_mesh(rankedChairDir + str(i + 1) + ".obj", mesh)
+                mesh = tri.load_mesh(newChairDir + scoredChair)
+                mesh.export(rankedChairDir + str(i + 1) + ".obj")
             sys.exit()
         elif templateDirName == "load":
             templates, parts = loadTemplatesWithoutPickle()
@@ -564,7 +491,7 @@ if __name__ == '__main__':
         newMesh = generateForTemplate(selectedTemplate, parts)
         print("New Chair Generated")
 
-        pymesh.save_mesh("newChair.obj", newMesh);
+        tri.export("newChair.obj", newMesh)
 
         createViews.createViews("newChair.obj", 1)
 
@@ -576,12 +503,13 @@ if __name__ == '__main__':
             print("New Chair Generated")
 
             file = newChairDir + str(index + 1).zfill(4) + "_" + template.dir + ".obj"
-            pymesh.save_mesh(file, newMesh);
+            newMesh.export(file)
             createViews.createViews(file, chairCount)
             chairCount += 3
 
         scores = evaluate_sample.main(newBMPDir)
-        print(sum(scores) / len(scores))
+        print("Median score: " + str(np.median(np.array(scores))))
+        print("Average score: " + str(np.average(np.array(scores))))
         fileList = listdir(newChairDir)
         fileList.sort()
         fileListBmp = listdir(newBMPDir)
@@ -591,6 +519,6 @@ if __name__ == '__main__':
             scoredChair = fileList.pop(index)
             scores = np.delete(scores, index)
             fileListRanked.append(scoredChair)
-            mesh = pymesh.load_mesh(newChairDir + scoredChair)
-            pymesh.save_mesh(rankedChairDir + str(i + 1) + ".obj", mesh)
+            mesh = tri.load_mesh(newChairDir + scoredChair)
+            mesh.export(rankedChairDir + str(i + 1) + ".obj")
         print(fileListRanked)

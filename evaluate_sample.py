@@ -21,7 +21,7 @@ def load(dimension, directory = "new_chair_bmp/"):
 
     fileList = os.listdir(folder)
     fileList.sort(key=lambda f: int(''.join(filter(str.isdigit, f))))
-    print(fileList)
+    # print(fileList)
 
 
     # for filename in os.listdir(folder):
@@ -30,7 +30,7 @@ def load(dimension, directory = "new_chair_bmp/"):
     #     print(i)
 
         view = int(filename.split(".")[0])
-        print(view)
+        # print(view)
         view = view % 3
         img = cv2.imread(folder+filename)
         if dimension < 224:

@@ -1,7 +1,6 @@
 import numpy as np
 import sys
 import trimesh as tri
-import pymesh
 from os import listdir, path
 
 '''
@@ -32,13 +31,8 @@ def convertMeshToObb(mesh):
 def convertObbToMesh(obb):
 	points = obb.vertices
 	indices = obb.faces
-	mesh = pymesh.form_mesh(points, indices)
+	mesh = tri.base.Trimesh(points, indices)
 	return mesh
-
-def convertPymeshToTrimesh(mesh):
-	points = mesh.vertices
-	faces = mesh.faces
-	return tri.base.Trimesh(vertices=points, faces=faces)
 
 
 def checkCollision(obb1, obb2):
