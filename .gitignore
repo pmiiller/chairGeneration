@@ -1,6 +1,6 @@
 __pycache__
 chairs-data
-checkpoint
+.ipynb_checkpoints
 venv
 *.obj
 *.pyc
