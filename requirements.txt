@@ -1,0 +1,10 @@
+numpy
+scipy
+trimesh
+pyglet
+rtree
+opencv-python
+tensorflow
+pillow
+pandas
+jupyter
