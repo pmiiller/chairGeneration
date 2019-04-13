@@ -2,7 +2,9 @@
 
 Github link: https://github.com/pmiiller/chairGeneration
 
-## main.py instructions
+## Instructions
+ - Run `python clean_meshes.py` in order to clean the training data
+  - Must be run before anything else!
  - `python main.py` to generate a single chair with a random template
  - `python main.py <chairDirectoryName>` to generate a single chair with a specified template
  - `python main.py all` to generate a chair for all templates and then score them
