@@ -162,6 +162,7 @@ def createViews(filename, chairCount, directory='new_chair_bmp/'):
 if __name__ == '__main__':
 	indir = 'new_chair_obj'
 	fileList = os.listdir(indir)
+	fileList.sort()
 	print(fileList)
 
 	chairCount = 1

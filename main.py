@@ -504,8 +504,15 @@ if __name__ == '__main__':
         if templateDirName == "all":
             doAll = True
         elif templateDirName == "eval":
+            chairCount = 1
+            fileList = listdir(newChairDir)
+            for file in fileList:
+                createViews.createViews(newChairDir + file, chairCount)
+                chairCount += 3
+
             scores = evaluate_sample.main(newBMPDir)
-            print(sum(scores) / len(scores))
+            print("Median: " + np.median(np.array(scores)))
+            print("Average: " + np.average(np.array(scores)))
             fileList = listdir(newChairDir)
             fileList.sort()
             fileListBmp = listdir(newBMPDir)
