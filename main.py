@@ -430,6 +430,7 @@ if __name__ == '__main__':
         templateDirName = str(sys.argv[1])
         if templateDirName == "all":
             doAll = True
+
         elif templateDirName == "eval":
             chairCount = 1
             fileList = listdir(newChairDir)
@@ -450,17 +451,43 @@ if __name__ == '__main__':
                 mesh = tri.load_mesh(newChairDir + scoredChair)
                 mesh.export(rankedChairDir + str(i + 1) + ".obj")
             sys.exit()
+
         elif templateDirName == "load":
             templates, parts = loadTemplatesWithoutPickle()
             with open('templates', 'wb') as f:
                 pickle.dump([templates, parts], f)
             sys.exit()
+
         elif templateDirName == "cluster":
             loadedTemplates = loadTemplates()
             parts = loadedTemplates[1]
             clusterings = km.kmedian(12,parts)
             with open("clusterings", 'wb') as f:
                 pickle.dump(clusterings, f)
+            sys.exit()
+
+        elif templateDirName == "scorer":
+            goodDir = "scorer_validation/good/"
+            badDir = "scorer_validation/bad/"
+
+            chairCount = 1
+            fileList = listdir(goodDir)
+            for file in fileList:
+                createViews.createViews(goodDir + file, chairCount)
+                chairCount += 3
+            scores = evaluate_sample.main(newBMPDir)
+            print("Median score for good chairs: " + str(np.median(np.array(scores))))
+            print("Average score for good chairs: " + str(np.average(np.array(scores))))
+
+            chairCount = 1
+            fileList = listdir(badDir)
+            for file in fileList:
+                createViews.createViews(badDir + file, chairCount)
+                chairCount += 3
+            scores = evaluate_sample.main(newBMPDir)
+            print("Median score for bad chairs: " + str(np.median(np.array(scores))))
+            print("Average score for bad chairs: " + str(np.average(np.array(scores))))
+
             sys.exit()
 
     print("Beginning Generation Script")
