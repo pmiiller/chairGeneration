@@ -7,3 +7,6 @@ venv
 *.bmp
 !last_examples/*/*.obj
 !last_examples/*/*/*.obj
+!new_chair_obj/*.obj
+!new_chair_bmp/*.bmp
+!ranked_chair_obj/*.obj
