@@ -97,7 +97,6 @@ if __name__ == '__main__':
 
 	for f in listdir(mesh_directory) :
 		obbs.append(getOBB(path.join(mesh_directory, f)))
-		# a = obb.convertPymeshToTrimesh(pymesh.load_mesh(path.join(mesh_directory, f)))
 
 	scene = tri.scene.scene.append_scenes(obbs)
 	scene.show()

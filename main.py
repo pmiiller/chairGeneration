@@ -395,13 +395,13 @@ def generateForTemplate(selectedTemplate, parts):
 
                     symmetricMesh = selectedMesh.copy()
                     symmetricMesh.apply_transform(transform)
-                    symmetricMesh.fix_normals() # reflecting the parts can break the normals
                     newMesh = addToNewMesh(newMesh, symmetricMesh)
 
                     templateParts.remove(symmetryPart)
 
         # creates views and scores
         possibleMesh.append(newMesh)
+        newMesh.fix_normals() # reflecting the parts can break the normals
         newMesh.export("sample_mesh.obj")
         createViews.createViews("sample_mesh.obj", 1, sampleChairBmp)
         score = evaluate_sample.main(sampleChairBmp)
