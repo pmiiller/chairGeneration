@@ -511,8 +511,8 @@ if __name__ == '__main__':
                 chairCount += 3
 
             scores = evaluate_sample.main(newBMPDir)
-            print("Median: " + np.median(np.array(scores)))
-            print("Average: " + np.average(np.array(scores)))
+            print("Median: " + str(np.median(np.array(scores))))
+            print("Average: " + str(np.average(np.array(scores))))
             fileList = listdir(newChairDir)
             fileList.sort()
             fileListBmp = listdir(newBMPDir)

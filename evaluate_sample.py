@@ -5,7 +5,7 @@ import cv2
 from model import cnn_model_fn
 
 
-tf.logging.set_verbosity(tf.logging.INFO)
+tf.logging.set_verbosity(tf.logging.ERROR)
 
 def load(dimension, directory = "new_chair_bmp/"):
 
